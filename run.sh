@@ -52,6 +52,9 @@ ${target}-gcc -std=gnu99 -ffreestanding -g -c start.s -o start.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -c kernel.c -o kernel.o &&
 ${target}-gcc -ffreestanding -nostdlib -g -T linker.ld start.o kernel.o -o mykernel.elf -lgcc &&
 
+# Run kernel using:
+# qemu-system-i386 -kernel project/mykernel.elf
+
 exit 0
 # ============================================================================ #
 
