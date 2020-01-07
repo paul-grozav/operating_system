@@ -49,8 +49,9 @@ fi &&
 # Compile kernel
 cd ${work_path}/project &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -c start.s -o start.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -c kernel.c -o kernel.o &&
-${target}-gcc -ffreestanding -nostdlib -g -T linker.ld start.o kernel.o -o mykernel.elf -lgcc &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I. -c kernel.c -o kernel.o &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I. -c module.c -o module.o &&
+${target}-gcc -ffreestanding -nostdlib -g -T linker.ld start.o kernel.o module.o -o mykernel.elf -lgcc &&
 
 # Run kernel using:
 # qemu-system-i386 -kernel project/mykernel.elf

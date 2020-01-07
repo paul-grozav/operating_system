@@ -5,6 +5,7 @@
 // They give us access to useful things like fixed-width types
 #include <stddef.h>
 #include <stdint.h>
+#include "module.h"
 
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -108,6 +109,7 @@ void kernel_main()
   term_print("Hello, World!\n");
   term_print("Welcome to the kernel created "
     "by Tancredi-Paul Grozav <paul@grozav.info>.\n");
+  module(vga_buffer, (VGA_COLS * term_row) + term_col);
 }
 // -------------------------------------------------------------------------- //
 
