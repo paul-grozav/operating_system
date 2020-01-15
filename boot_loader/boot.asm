@@ -24,7 +24,12 @@ init: # this is the beginning of our binary later.
   hlt # stops executing. Note! avoid: jmp init
   # If we would call init again, that would print same character forever
 
-.fill 510-(.-init), 1, 0 # add zeroes to make it 510 bytes long
-.word 0xaa55 # adds 2 extra "magic" bytes that tell BIOS that this is bootable,
-# reaching a size of 512 bytes
+# The last parameter is the value that fills the binary file, up to 510 bytes.
+# It can be any value, not just 0. And you can see it using:
+# hexdump -C boot.bin
+.fill 510-(.-init), 1, 191 # add zeroes to make it 510 bytes long
+
+# Adds 2 extra "magic" bytes that tell BIOS that this is bootable, reaching a
+# size of 512 bytes
+.word 0xaa55
 # ============================================================================ #
