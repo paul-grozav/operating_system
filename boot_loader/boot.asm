@@ -17,6 +17,10 @@ init: # this is the beginning of our binary later.
   # Call the function in AH (teletype) from interrupt 0x10(video)
   int $0x10 # call the function in ah from interrupt 0x10
 
+  # Print another character by setting AL and calling the interrupt
+  mov $0x59, %al
+  int $0x10
+
   hlt # stops executing. Note! avoid: jmp init
   # If we would call init again, that would print same character forever
 
