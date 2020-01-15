@@ -4,7 +4,21 @@
 .global init # makes our label "init" available to the outside
 
 init: # this is the beginning of our binary later.
-  jmp init # jump to "init" - will loop in this recursive call, hanging
+  # Note The dollar sign is used in front of constant numeric values.
+
+  # Set AH to value 0xe which is the teletype function. This function prints a
+  # character and automatically advances the cursor. The character printer by
+  # this function will be read from(must be set to) AL.
+  mov $0x0e, %ah
+
+  # Set the character we want to be printed: X (or 0x58 in hex)
+  mov $0x58, %al
+
+  # Call the function in AH (teletype) from interrupt 0x10(video)
+  int $0x10 # call the function in ah from interrupt 0x10
+
+  hlt # stops executing. Note! avoid: jmp init
+  # If we would call init again, that would print same character forever
 
 .fill 510-(.-init), 1, 0 # add zeroes to make it 510 bytes long
 .word 0xaa55 # adds 2 extra "magic" bytes that tell BIOS that this is bootable,
