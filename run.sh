@@ -48,13 +48,16 @@ fi &&
 
 # Compile kernel
 cd ${work_path}/project &&
-${target}-gcc -std=gnu99 -ffreestanding -g -c start.s -o start.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I. -c kernel.c -o kernel.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I. -c module.c -o module.o &&
-${target}-gcc -ffreestanding -nostdlib -g -T linker.ld start.o kernel.o module.o -o mykernel.elf -lgcc &&
+rm -rf build && mkdir -p build && cd build &&
+src_folder="${work_path}/project/src" &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/start.s -o start.o &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/kernel.c -o kernel.o &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_terminal.c -o module_terminal.o &&
+${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_terminal.o -lgcc -o my_kernel.elf &&
 
 # Run kernel using:
-# qemu-system-i386 -kernel project/mykernel.elf
+# qemu-system-i386 -curses -kernel project/build/my_kernel.elf
+# Exit with: ESC, 2 then write quit and type ENTER
 
 exit 0
 # ============================================================================ #
