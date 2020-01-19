@@ -14,20 +14,38 @@ typedef struct
    * this memory location.
    */
   volatile uint16_t *buffer;
-  
+
   /**
    * By default, the VGA textmode buffer has a size of 80x25 characters. You
-   * should not change the values of these members
+   * should not change this value after creating the struct. This variable
+   * contains the number of characters we can fit in one horizontal row/line of
+   * text (80).
    */
-  uint8_t columns;
-  uint8_t rows;
+  uint8_t total_columns;
 
-  //! We start displaying text in the top-left of the screen (column=0, row=0)
-  uint8_t term_col;
-  uint8_t term_row;
-  
+  /**
+   * By default, the VGA textmode buffer has a size of 80x25 characters. You
+   * should not change this value after creating the struct. This variable
+   * contains the number of rows/lines can fit on the screen (25).
+   */
+  uint8_t total_rows;
+
+  /**
+   * We start displaying text in the top-left of the screen (column=0, row=0).
+   * This contains the current column where the cursor is at. Where the next
+   * character will be placed.
+   */
+  uint8_t column_current;
+
+  /**
+   * We start displaying text in the top-left of the screen (column=0, row=0).
+   * This contains the current row where the cursor is at. Where the next
+   * character will be placed.
+   */
+  uint8_t row_current;
+
   //! Black background, White foreground
-  uint8_t term_color;
+  uint8_t color;
 } terminal_vga;
 
 /**
