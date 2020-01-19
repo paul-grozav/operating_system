@@ -32,7 +32,7 @@ void kernel_main()
     , &t);
 
   // Print integers
-  uint8_t i1 = 255;
+  uint8_t i1 = 215;
   module_terminal_print_uint8(i1, &t);
 }
 // -------------------------------------------------------------------------- //

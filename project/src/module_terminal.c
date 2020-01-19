@@ -85,7 +85,21 @@ void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
 // -------------------------------------------------------------------------- //
 void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t)
 {
-  module_terminal_print_char('2', t);
+  if(i < 10)
+  {
+    module_terminal_print_char((char)(48+i), t);
+  }
+  else if(10 <= i && i < 100)
+  {
+    module_terminal_print_char((char)(48+i/10), t);
+    module_terminal_print_char((char)(48+(i%10)), t);
+  }
+  else
+  {
+    module_terminal_print_char((char)(48+i/100), t);
+    module_terminal_print_char((char)(48+((i/10)%10)), t);
+    module_terminal_print_char((char)(48+(i%10)), t);
+  }
 }
 // -------------------------------------------------------------------------- //
 
