@@ -20,14 +20,20 @@ void kernel_main()
   // We're here! Let's initiate the terminal and display a message to show we
   // got here.
 
-  terminal_vga t = terminal_vga_create();
+  module_terminal_vga t = module_terminal_vga_create();
   // Initiate terminal
-  terminal_init(&t);
+  module_terminal_init(&t);
 
   // Display some messages
-  terminal_print("Hello, World!\n", &t);
-  terminal_print("Welcome to the kernel created "
-    "by Tancredi-Paul Grozav <paul@grozav.info>.\n", &t);
+  module_terminal_print_char('H', &t);
+  module_terminal_print_c_string("ello, World!\n"
+    "Welcome to the kernel created "
+    "by Tancredi-Paul Grozav <paul@grozav.info>.\n"
+    , &t);
+
+  // Print integers
+  uint8_t i1 = 255;
+  module_terminal_print_uint8(i1, &t);
 }
 // -------------------------------------------------------------------------- //
 

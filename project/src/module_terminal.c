@@ -3,9 +3,9 @@
 // -------------------------------------------------------------------------- //
 #include "module_terminal.h"
 // -------------------------------------------------------------------------- //
-terminal_vga terminal_vga_create()
+module_terminal_vga module_terminal_vga_create()
 {
-  terminal_vga t;
+  module_terminal_vga t;
   t.buffer = (uint16_t*)(0xB8000);
   t.total_columns = 80;
   t.total_rows = 25;
@@ -15,7 +15,7 @@ terminal_vga terminal_vga_create()
   return t;
 }
 // -------------------------------------------------------------------------- //
-void terminal_init(terminal_vga *t)
+void module_terminal_init(module_terminal_vga *t)
 {
   // Clear the textmode buffer
   for (uint8_t col = 0; col < t->total_columns; col ++)
@@ -36,7 +36,7 @@ void terminal_init(terminal_vga *t)
 }
 // -------------------------------------------------------------------------- //
 // This function places a single character onto the screen
-void terminal_putc(char c, terminal_vga *t)
+void module_terminal_print_char(const char c, module_terminal_vga *t)
 {
   // Remember - we don't want to display ALL characters!
   switch (c)
@@ -74,13 +74,18 @@ void terminal_putc(char c, terminal_vga *t)
   }
 }
 // -------------------------------------------------------------------------- //
-void terminal_print(const char* str, terminal_vga *t)
+void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
 {
   // Keep placing characters until we hit the null-terminating character ('\0')
   for (size_t i = 0; str[i] != '\0'; i ++)
   {
-    terminal_putc(str[i], t);
+    module_terminal_print_char(str[i], t);
   }
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t)
+{
+  module_terminal_print_char('2', t);
 }
 // -------------------------------------------------------------------------- //
 

@@ -46,17 +46,23 @@ typedef struct
 
   //! Black background, White foreground
   uint8_t color;
-} terminal_vga;
+} module_terminal_vga;
 
 /**
  * Create a terminal_vga structure.
  */
-terminal_vga terminal_vga_create();
+module_terminal_vga module_terminal_vga_create();
 
 //! This function initiates the terminal by clearing it
-void terminal_init(terminal_vga *t);
+void module_terminal_init(module_terminal_vga *t);
+
+//! Print one character to the screen
+void module_terminal_print_char(const char c, module_terminal_vga *t);
 
 //! This function prints an entire string onto the screen
-void terminal_print(const char *str, terminal_vga *t);
+void module_terminal_print_c_string(const char *str, module_terminal_vga *t);
+
+//! Print unsigned 8 bit integer on the screen
+void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t);
 // -------------------------------------------------------------------------- //
 
