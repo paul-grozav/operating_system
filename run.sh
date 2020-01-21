@@ -53,11 +53,14 @@ src_folder="${work_path}/project/src" &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/start.s -o start.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/kernel.c -o kernel.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_terminal.c -o module_terminal.o &&
-${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_terminal.o -lgcc -o my_kernel.elf &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_serial.c -o module_serial.o &&
+${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_terminal.o module_serial.o -lgcc -o my_kernel.elf &&
 
 # Run kernel using:
 # qemu-system-i386 -curses -kernel project/build/my_kernel.elf
-# Exit with: ESC, 2 then write quit and type ENTER
+# Exit with: ESC, 2 you can switch to QEMU's console, then write quit and type ENTER to close the emulator.
+# Serial console: ESC, 3 to switch to QEMU's serial console
+
 
 exit 0
 # ============================================================================ #

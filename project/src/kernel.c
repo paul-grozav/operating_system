@@ -5,6 +5,7 @@
 // They give us access to useful things like fixed-width types
 #include <stdint.h>
 #include "module_terminal.h"
+#include "module_serial.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -34,6 +35,7 @@ void kernel_main()
   // Print integers
   uint8_t i1 = 215;
   module_terminal_print_uint8(i1, &t);
+  module_serial_test();
 }
 // -------------------------------------------------------------------------- //
 
