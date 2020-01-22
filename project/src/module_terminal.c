@@ -2,6 +2,7 @@
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
 #include "module_terminal.h"
+#include "module_base.h"
 // -------------------------------------------------------------------------- //
 module_terminal_vga module_terminal_vga_create()
 {
@@ -100,6 +101,14 @@ void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t)
     module_terminal_print_char((char)(48+((i/10)%10)), t);
     module_terminal_print_char((char)(48+(i%10)), t);
   }
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_print_uint64(const uint64_t i, module_terminal_vga *t)
+{
+  char buffer[21];
+  const size_t l = uint64_to_ascii_base10(i, buffer);
+  buffer[l] = '\0';
+  module_terminal_print_c_string(buffer, t);
 }
 // -------------------------------------------------------------------------- //
 

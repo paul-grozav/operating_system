@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "module_terminal.h"
 #include "module_serial.h"
+#include "module_base.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -35,6 +36,12 @@ void kernel_main()
   // Print integers
   uint8_t i1 = 215;
   module_terminal_print_uint8(i1, &t);
+  module_terminal_print_char('\n', &t);
+
+  uint64_t i2 = 18446744073709551614;
+  module_terminal_print_uint64(i2, &t);
+  module_terminal_print_char('\n', &t);
+
   module_serial_test();
 }
 // -------------------------------------------------------------------------- //
