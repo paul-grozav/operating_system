@@ -4,7 +4,8 @@
 # ============================================================================ #
 # OS setup
 #apt update &&
-#apt install -y curl gcc g++ make libgmp-dev libmpfr-dev libmpc-dev &&
+#apt install -y curl gcc g++ make libgmp-dev libmpfr-dev libmpc-dev \
+#  grub2 xorriso &&
 
 
 work_path="/mnt" &&
@@ -56,6 +57,23 @@ ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/modu
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_serial.c -o module_serial.o &&
 ${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_terminal.o module_serial.o -lgcc -o my_kernel.elf &&
 
+# Make ISO
+mkdir -p iso/boot/grub &&
+(cat - <<EOF 1>iso/boot/grub/grub.cfg
+set timeout=3 # Wait 0 seconds for the user to choose the item, or use default
+set default=0 # Set the default menu entry - index 0 (first)
+
+menuentry "My Operating System" {
+   multiboot /boot/kernel-file   # The multiboot command replaces the kernel command
+   boot
+}
+EOF
+) &&
+cp my_kernel.elf iso/boot/kernel-file &&
+grub-mkrescue iso -o bootable.iso &&
+
+
+# Run iso: qemu-system-i386 -cdrom build/bootable.iso
 # Run kernel using:
 # qemu-system-i386 -curses -kernel project/build/my_kernel.elf
 # Exit with: ESC, 2 you can switch to QEMU's console, then write quit and type ENTER to close the emulator.
