@@ -1,8 +1,7 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
-#include <stddef.h>
-#include <stdint.h>
-void tedi(volatile uint16_t* b, size_t idx);
+//! Test communication over serial port
+void module_serial_test();
 // -------------------------------------------------------------------------- //
 
