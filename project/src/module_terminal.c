@@ -111,4 +111,14 @@ void module_terminal_print_uint64(const uint64_t i, module_terminal_vga *t)
   module_terminal_print_c_string(buffer, t);
 }
 // -------------------------------------------------------------------------- //
+void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t)
+{
+  char buffer[20+1+2];
+  buffer[0] = '0';
+  buffer[1] = 'x';
+  const size_t l = uint64_to_ascii_base16(i, buffer+2);
+  buffer[2+l] = '\0';
+  module_terminal_print_c_string(buffer, t);
+}
+// -------------------------------------------------------------------------- //
 

@@ -53,6 +53,10 @@
   // Here is the 'start' label we mentioned before. This is the first code that
   // gets run in our kernel.
   start:
+    // Try starting graphics mode before C execution
+    //mov $0x00, %ah
+    //mov $0x04, %al
+    //int $0x10
     // First thing's first: we want to set up an environment that's ready to run
     // C code.
     // C is very relaxed in its requirements: All we need to do is to set up the

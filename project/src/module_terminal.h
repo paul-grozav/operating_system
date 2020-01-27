@@ -67,5 +67,8 @@ void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t);
 
 //! Print unsigned 64 bit integer on the screen
 void module_terminal_print_uint64(const uint64_t i, module_terminal_vga *t);
+
+//! Print unsigned 64 bit integer as hex(base 16) on the screen
+void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t);
 // -------------------------------------------------------------------------- //
 

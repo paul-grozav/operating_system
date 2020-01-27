@@ -16,6 +16,7 @@
   #error "This code must be compiled with an x86-elf compiler"
 #endif
 // -------------------------------------------------------------------------- //
+// -------------------------------------------------------------------------- //
 // This is our kernel's main function
 void kernel_main()
 {
@@ -42,7 +43,35 @@ void kernel_main()
   module_terminal_print_uint64(i2, &t);
   module_terminal_print_char('\n', &t);
 
+  module_terminal_print_c_string(
+    "64222 as hex is ", &t);
+  module_terminal_print_hex_uint64(64222, &t); // 0xfade
+  module_terminal_print_char('\n', &t);
+
+  module_terminal_print_c_string(
+    "kernel_main() at memory location: ", &t);
+  module_terminal_print_hex_uint64(&kernel_main, &t);
+  module_terminal_print_char('\n', &t);
   module_serial_test();
+  // ------------- graphics test ---------------------------
+  //mov $0x0e, %ah
+  //mov $0x57, %al # 57=W
+  //int $0x10
+/*
+  asm volatile(
+    "mov $0x0e, %ah\n\t"
+    "mov $0x57, %al\n\t"
+    "int $0x10"
+    "hlt"
+  );
+*/
+// : "=a"(ret) : "Nd"(port));
+  //-----------------
+//  unsigned char *vram = 0xA0000;
+//  module_terminal_print_hex_uint64(vram, &t);
+//  module_terminal_print_char('\n', &t);
+//  unsigned char *pixel = vram;// + y*pitch + x*pixelwidth;
+//  *pixel = 4;
 }
 // -------------------------------------------------------------------------- //
 
