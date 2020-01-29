@@ -1,6 +1,10 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
+// The start label/function in this file, is the entry point to our kernel.
+// All it does is set the stack pointer in %esp and call our C function:
+// kernel_main. If that function returns, we'll just hang.
+// -------------------------------------------------------------------------- //
 // We declare the 'kernel_main' label as being external to this file.
 // That's because it's the name of the main C function in 'kernel.c'.
 .extern kernel_main
@@ -9,17 +13,6 @@
 // since the linker will need to know where it is.
 // In a bit, we'll actually take a look at the code that defines this label.
 .global start
-
-/*
-.global isr_wrapper
-.align 4
-isr_wrapper:
-  pushal
-  cld // C code following the sysV ABI requires DF to be clear on function entry
-  call interrupt_handler
-  popal
-  iret
-*/
 
 // Our bootloader, GRUB, needs to know some basic information about our kernel
 // before it can boot it.
@@ -64,10 +57,6 @@ isr_wrapper:
   // Here is the 'start' label we mentioned before. This is the first code that
   // gets run in our kernel.
   start:
-    // Try starting graphics mode before C execution
-    //mov $0x00, %ah
-    //mov $0x04, %al
-    //int $0x10
     // First thing's first: we want to set up an environment that's ready to run
     // C code.
     // C is very relaxed in its requirements: All we need to do is to set up the

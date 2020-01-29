@@ -57,6 +57,7 @@ void kernel_main()
   //-----------------
   // IDT
   // http://www.jamesmolloy.co.uk/tutorial_html/4.-The%20GDT%20and%20IDT.html
+/*
   module_terminal_print_char('\n', &t);
   uint16_t total;
   uint8_t low_mem=0;
@@ -77,7 +78,7 @@ void kernel_main()
   module_terminal_print_c_string("total_mem=", &t);
   module_terminal_print_uint64(total, &t);
   module_terminal_print_char('\n', &t);
-
+*/
   module_interrupts_test();
 
   module_terminal_print_char('\n', &t);
