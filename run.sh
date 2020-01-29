@@ -2,10 +2,12 @@
 # ============================================================================ #
 # Author: Tancredi-Paul Grozav <paul@grozav.info>
 # ============================================================================ #
+# docker run -it --name=os debian:10.2
 # OS setup
 #apt update &&
 #apt install -y curl gcc g++ make libgmp-dev libmpfr-dev libmpc-dev \
 #  grub2 xorriso &&
+# Continue without installing GRUB? [yes/no] yes
 
 
 work_path="/mnt" &&
@@ -52,12 +54,14 @@ echo "Compiling kernel ..." &&
 cd ${work_path}/project &&
 rm -rf build && mkdir -p build && cd build &&
 src_folder="${work_path}/project/src" &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/start.s -o start.o &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/asm_start.s -o asm_start.o &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/asm_description_table.s -o asm_description_table.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/kernel.c -o kernel.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_terminal.c -o module_terminal.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_serial.c -o module_serial.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_base.c -o module_base.o &&
-${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_terminal.o module_serial.o module_base.o -lgcc -o my_kernel.elf &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_description_table.c -o module_description_table.o &&
+${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld asm_start.o asm_description_table.o kernel.o module_terminal.o module_serial.o module_base.o module_description_table.o -lgcc -o my_kernel.elf &&
 echo "Compiled kernel!" &&
 
 # Make ISO
@@ -66,6 +70,7 @@ mkdir -p iso/boot/grub &&
 (cat - <<EOF 1>iso/boot/grub/grub.cfg
 set timeout=0 # Wait 0 seconds for the user to choose the item, or use default
 set default=0 # Set the default menu entry - index 0 (first)
+CONFIG_PANIC_TIMEOUT=10
 
 menuentry "My Operating System" {
    multiboot /boot/kernel-file   # The multiboot command replaces the kernel command
@@ -83,7 +88,10 @@ echo "Created .iso file!" &&
 # qemu-system-i386 -curses -kernel project/build/my_kernel.elf
 # Exit with: ESC, 2 you can switch to QEMU's console, then write quit and type ENTER to close the emulator.
 # Serial console: ESC, 3 to switch to QEMU's serial console
+# Serial redirect: -serial file:project/build/serial.txt
+# Current running cmd: qemu-system-i386 -curses -cdrom project/build/bootable.iso -boot d -serial file:project/build/serial.txt
 
+chown 1000:1000 -R ${work_path} &&
 
 exit 0
 # ============================================================================ #

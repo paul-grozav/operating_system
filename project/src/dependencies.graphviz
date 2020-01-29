@@ -1,0 +1,8 @@
+digraph G {
+  "asm_start" -> "kernel"
+  "kernel" -> "module_terminal"
+  "kernel" -> "module_serial"
+  "module_terminal" -> "module_base"
+  "kernel" -> "description_table"
+}
+

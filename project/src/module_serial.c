@@ -7,14 +7,14 @@
 // -------------------------------------------------------------------------- //
 #define PORT 0x3f8 // COM1
 // -------------------------------------------------------------------------- //
-static inline uint8_t inb(uint16_t port)
+uint8_t inb(const uint16_t port)
 {
   uint8_t ret;
   asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 // -------------------------------------------------------------------------- //
-static inline void outb(uint16_t port, uint8_t val)
+void outb(const uint16_t port, const uint8_t value)
 {
   // There's an outb %al, $imm8  encoding, for compile-time constant port
   // numbers that fit in 8b. (N constraint).
@@ -23,7 +23,7 @@ static inline void outb(uint16_t port, uint8_t val)
   // The  outb  %al, %dx  encoding is the only option for all other cases.
   // %1 expands to %dx because  port  is a uint16_t.  %w1 could be used if we
   // had the port number a wider C type
-  asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
+  asm volatile("outb %0, %1" : : "a"(value), "Nd"(port));
 }
 // -------------------------------------------------------------------------- //
 void init_serial()
@@ -43,10 +43,10 @@ int is_transmit_empty()
   return inb(PORT + 5) & 0x20;
 }
 // -------------------------------------------------------------------------- //
-void write_serial(char a)
+void write_serial(const char a)
 {
   while (is_transmit_empty() == 0);
-  outb(PORT,a);
+  outb(PORT, a);
 }
 // -------------------------------------------------------------------------- //
 // Receiving data
@@ -73,7 +73,21 @@ void module_serial_print_c_string(const char* str)
 void module_serial_test()
 {
   init_serial();
-  module_serial_print_c_string("This is just a test for serial communications");
+  module_serial_print_c_string(
+    "This is just a test for serial communications.\n");
+
+  // notify the other end that the serial communication can now begin
+  write_serial(0);
+  if(serial_received() == 1)
+  {
+    module_serial_print_c_string("Serial has data.\n");
+  }
+  else
+  {
+    module_serial_print_c_string("Serial has no data.\n");
+  }
+//  char c = 0;
+//  c = read_serial(); write_serial(c);
 }
 // -------------------------------------------------------------------------- //
 
