@@ -4,6 +4,8 @@
 #include "module_terminal.h"
 #include "module_base.h"
 // -------------------------------------------------------------------------- //
+module_terminal_vga *module_terminal_vga_instance = NULL;
+// -------------------------------------------------------------------------- //
 module_terminal_vga module_terminal_vga_create()
 {
   module_terminal_vga t;
@@ -14,6 +16,11 @@ module_terminal_vga module_terminal_vga_create()
   t.row_current = 0;
   t.color = 0x0F;
   return t;
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_global_init()
+{
+  module_terminal_init(module_terminal_vga_instance);
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_init(module_terminal_vga *t)
@@ -36,7 +43,11 @@ void module_terminal_init(module_terminal_vga *t)
   }
 }
 // -------------------------------------------------------------------------- //
-// This function places a single character onto the screen
+void module_terminal_global_print_char(const char c)
+{
+  module_terminal_print_char(c, module_terminal_vga_instance);
+}
+// -------------------------------------------------------------------------- //
 void module_terminal_print_char(const char c, module_terminal_vga *t)
 {
   // Remember - we don't want to display ALL characters!
@@ -75,6 +86,11 @@ void module_terminal_print_char(const char c, module_terminal_vga *t)
   }
 }
 // -------------------------------------------------------------------------- //
+void module_terminal_global_print_c_string(const char* str)
+{
+  module_terminal_print_c_string(str, module_terminal_vga_instance);
+}
+// -------------------------------------------------------------------------- //
 void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
 {
   // Keep placing characters until we hit the null-terminating character ('\0')
@@ -82,6 +98,11 @@ void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
   {
     module_terminal_print_char(str[i], t);
   }
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_global_print_uint8(const uint8_t i)
+{
+  module_terminal_print_uint8(i, module_terminal_vga_instance);
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t)
@@ -103,12 +124,22 @@ void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t)
   }
 }
 // -------------------------------------------------------------------------- //
+void module_terminal_global_print_uint64(const uint64_t i)
+{
+  module_terminal_print_uint64(i, module_terminal_vga_instance);
+}
+// -------------------------------------------------------------------------- //
 void module_terminal_print_uint64(const uint64_t i, module_terminal_vga *t)
 {
   char buffer[21];
   const size_t l = uint64_to_ascii_base10(i, buffer);
   buffer[l] = '\0';
   module_terminal_print_c_string(buffer, t);
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_global_print_hex_uint64(const uint64_t i)
+{
+  module_terminal_print_hex_uint64(i, module_terminal_vga_instance);
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t)
