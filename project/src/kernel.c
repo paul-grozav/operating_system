@@ -7,7 +7,7 @@
 #include "module_terminal.h"
 #include "module_serial.h"
 #include "module_base.h"
-#include "module_description_table.h"
+#include "module_interrupt.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly

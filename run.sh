@@ -60,9 +60,9 @@ ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/modu
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_terminal.c -o module_terminal.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_serial.c -o module_serial.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_base.c -o module_base.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_description_table.c -o module_description_table.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_description_table_asm.s -o module_description_table_asm.o &&
-${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_kernel.o module_terminal.o module_serial.o module_base.o module_description_table.o module_description_table_asm.o -lgcc -o my_kernel.elf &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_interrupt.c -o module_interrupt.o &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_interrupt_asm.s -o module_interrupt_asm.o &&
+${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_kernel.o module_terminal.o module_serial.o module_base.o module_interrupt.o module_interrupt_asm.o -lgcc -o my_kernel.elf &&
 echo "Compiled kernel!" &&
 
 # Make ISO
