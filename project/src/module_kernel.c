@@ -4,6 +4,8 @@
 #include <stdint.h> // uintX_t
 #include "module_kernel.h"
 // -------------------------------------------------------------------------- //
+// In/Out bytes
+// -------------------------------------------------------------------------- //
 void module_kernel_out_byte(const uint16_t port, const uint8_t value)
 {
   // There's an outb %al, $imm8  encoding, for compile-time constant port
@@ -21,5 +23,16 @@ uint8_t module_kernel_in_byte(const uint16_t port)
   uint8_t ret;
   asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
   return ret;
+}
+// -------------------------------------------------------------------------- //
+// Memory stuff
+// -------------------------------------------------------------------------- //
+void module_kernel_memset(void *start, const char value, const size_t length)
+{
+  char *buffer = (char*)start;
+  for(size_t i=0; i<length; i++)
+  {
+    buffer[i] = value;
+  }
 }
 // -------------------------------------------------------------------------- //

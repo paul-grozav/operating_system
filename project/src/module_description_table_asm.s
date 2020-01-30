@@ -1,6 +1,8 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
+// Interrupts (IRQ) requires GDT + IDT + ISR
+// -------------------------------------------------------------------------- //
 // GDT
 .section .text
 .align 4
@@ -9,19 +11,19 @@
 .type gdt_flush, @function
 
 gdt_flush:
-    mov 4(%esp), %eax
-    lgdt (%eax)
+  mov 4(%esp), %eax
+  lgdt (%eax)
 
-    mov $0x10, %ax
-    mov %ax, %ds
-    mov %ax, %es
-    mov %ax, %fs
-    mov %ax, %ss
-    mov %ax, %gs
+  mov $0x10, %ax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %ss
+  mov %ax, %gs
 
-    ljmp $0x8, $.flush
+  ljmp $0x8, $.flush
 .flush:
-    ret
+  ret
 // -------------------------------------------------------------------------- //
 // IDT
 .section .text
@@ -31,29 +33,29 @@ gdt_flush:
 .type idt_flush, @function
 
 idt_flush:
-    mov 4(%esp),%eax
-    lidt (%eax)
-    ret
+  mov 4(%esp),%eax
+  lidt (%eax)
+  ret
 // -------------------------------------------------------------------------- //
 // Interrupt Service Routine - a.k.a. interrupt handler
 .section .text
 .align 4
 
 .macro ISR_NOERR index
-    .global isr\index
-    isr\index:
-        cli
-        push $0
-        push $\index
-        jmp isr_common
+  .global isr\index
+  isr\index:
+    cli
+    push $0
+    push $\index
+    jmp isr_common
 .endm
 
 .macro ISR_ERR index
-    .global isr\index
-    isr\index:
-        cli
-        push $\index
-        jmp isr_common
+  .global isr\index
+  isr\index:
+    cli
+    push $\index
+    jmp isr_common
 .endm
 
 ISR_NOERR 0
@@ -93,72 +95,40 @@ ISR_NOERR 31
 .extern isr_handler
 .type isr_handler, @function
 
-
-// v1 - not working
-//isr_common:
-//    pusha
-//
-//    push %ds
-//    push %es
-//    push %fs
-//    push %gs
-//
-//    mov $0x10, %ax
-//    mov %ax, %ds
-//    mov %ax, %es
-//    mov %ax, %fs
-//    mov %ax, %gs
-//    cld
-//
-//    push %esp
-//    call isr_handler
-//    add $4, %esp
-//
-//    pop %gs
-//    pop %fs
-//    pop %es
-//    pop %ds
-//
-//    popa
-//    add $8, %esp
-//
-//    iret
-
-// v2
 isr_common:
-    pusha
-    mov %ds,%ax
-    push %eax
-    mov $0x10, %ax
-    mov %ax, %ds
-    mov %ax, %es
-    mov %ax, %fs
-    mov %ax, %gs
+  pusha
+  mov %ds,%ax
+  push %eax
+  mov $0x10, %ax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %gs
 
-    call isr_handler
+  call isr_handler
 
-    pop %eax
-    mov %ax, %ds
-    mov %ax, %es
-    mov %ax, %fs
-    mov %ax, %gs
+  pop %eax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %gs
 
-    popa
-    add $8, %esp
-    iret
+  popa
+  add $8, %esp
+  iret
 // -------------------------------------------------------------------------- //
 // IRQs
 .section .text
 .align 4
 
 .macro IRQ ident byte
-	.global irq\ident
-	.type irq\ident, @function
-	irq\ident:
-		cli
-		push $0x00
-		push $\byte
-		jmp irq_common
+  .global irq\ident
+  .type irq\ident, @function
+  irq\ident:
+    cli
+    push $0x00
+    push $\byte
+    jmp irq_common
 .endm
 
 IRQ 0, 32
@@ -182,35 +152,35 @@ IRQ 15, 47
 .type irq_handler, @function
 
 irq_common:
-	pusha
+  pusha
 
-	push %ds
-	push %es
-	push %fs
-	push %gs
-	mov $0x10, %ax
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
-	cld
+  push %ds
+  push %es
+  push %fs
+  push %gs
+  mov $0x10, %ax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %gs
+  cld
 
-	/* Call interrupt handler */
-	push %esp
-	call irq_handler
-	add $4, %esp
+  // Call interrupt handler
+  push %esp
+  call irq_handler
+  add $4, %esp
 
-	/* Restore segment registers */
-	pop %gs
-	pop %fs
-	pop %es
-	pop %ds
+  // Restore segment registers
+  pop %gs
+  pop %fs
+  pop %es
+  pop %ds
 
-	/* Restore all registers */
-	popa
-	/* Cleanup error code and IRQ # */
-	add $8, %esp
-	/* pop CS, EIP, EFLAGS, SS and ESP */
-	iret
+  // Restore all registers
+  popa
+  // Cleanup error code and IRQ #
+  add $8, %esp
+  // pop CS, EIP, EFLAGS, SS and ESP
+  iret
 // -------------------------------------------------------------------------- //
 
