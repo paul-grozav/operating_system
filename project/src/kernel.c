@@ -9,6 +9,7 @@
 #include "module_base.h"
 #include "module_interrupt.h"
 #include "module_heap.h"
+#include "module_video.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -66,7 +67,7 @@ void kernel_main()
   module_interrupt_test();
   module_terminal_global_print_c_string(" Done.\n");
 
-  //-----------------
+  // heap begin
   module_heap_heap_bm kheap;
   char *ptr;
 
@@ -86,7 +87,10 @@ void kernel_main()
   // free the pointer (free)
   module_terminal_global_print_c_string("Heap free...\n");
   module_heap_free(&kheap, ptr);
+  // heap end
+
   //-----------------
+  module_video_test(&kheap);
 
   module_terminal_global_print_c_string("\n-------------\n");
   module_terminal_global_print_c_string("Kernel ended. B`bye!");

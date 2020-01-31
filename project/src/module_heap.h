@@ -5,6 +5,9 @@
 // You simply give it chunks of memory (by address) where the heap is :-)
 // Heap is a linked list of blocks.
 // -------------------------------------------------------------------------- //
+#ifndef MODULE_HEAP_H
+#define MODULE_HEAP_H
+
 #include <stdint.h> // uintX_t
 // -------------------------------------------------------------------------- //
 /**
@@ -66,5 +69,7 @@ void *module_heap_alloc(module_heap_heap_bm *heap, const uint32_t size);
  * @param[in] ptr - pointer to free. constant pointer to constant "void/unknown"
  */
 void module_heap_free(module_heap_heap_bm *heap, const void * const ptr);
+// -------------------------------------------------------------------------- //
+#endif // header guard
 // -------------------------------------------------------------------------- //
 
