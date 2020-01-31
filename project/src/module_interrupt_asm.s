@@ -3,7 +3,7 @@
 // -------------------------------------------------------------------------- //
 // Interrupts (IRQ) requires GDT + IDT + ISR
 // -------------------------------------------------------------------------- //
-// GDT
+// GDT - Global Descriptor Table
 .section .text
 .align 4
 
@@ -25,37 +25,40 @@ module_interrupt_gdt_flush:
 .flush:
   ret
 // -------------------------------------------------------------------------- //
-// IDT
+// IDT - Interrupt Descriptor Table - contains handlers for all interrupts
 .section .text
 .align 4
 
-.global idt_flush
-.type idt_flush, @function
+//! This function sets the given interrupt handlers table, so that the machine
+//! knows which handler to call for each interrupt
+.global module_interrupt_idt_flush
+.type module_interrupt_idt_flush, @function
 
-idt_flush:
+module_interrupt_idt_flush:
   mov 4(%esp),%eax
   lidt (%eax)
   ret
 // -------------------------------------------------------------------------- //
-// Interrupt Service Routine - a.k.a. interrupt handler
+// Interrupt Service Routine - a.k.a. interrupt handler - defines handlers
+// for each interrupt
 .section .text
 .align 4
 
 .macro ISR_NOERR index
-  .global isr\index
-  isr\index:
+  .global module_interrupt_isr\index
+  module_interrupt_isr\index:
     cli
     push $0
     push $\index
-    jmp isr_common
+    jmp module_interrupt_isr_common
 .endm
 
 .macro ISR_ERR index
-  .global isr\index
-  isr\index:
+  .global module_interrupt_isr\index
+  module_interrupt_isr\index:
     cli
     push $\index
-    jmp isr_common
+    jmp module_interrupt_isr_common
 .endm
 
 ISR_NOERR 0
@@ -92,10 +95,10 @@ ISR_NOERR 30
 ISR_NOERR 31
 //ISR_NOERR 127
 
-.extern isr_handler
-.type isr_handler, @function
+.extern module_interrupt_isr_handler
+.type module_interrupt_isr_handler, @function
 
-isr_common:
+module_interrupt_isr_common:
   pusha
   mov %ds,%ax
   push %eax
@@ -105,7 +108,7 @@ isr_common:
   mov %ax, %fs
   mov %ax, %gs
 
-  call isr_handler
+  call module_interrupt_isr_handler
 
   pop %eax
   mov %ax, %ds
@@ -122,13 +125,13 @@ isr_common:
 .align 4
 
 .macro IRQ ident byte
-  .global irq\ident
-  .type irq\ident, @function
-  irq\ident:
+  .global module_interrupt_irq\ident
+  .type module_interrupt_irq\ident, @function
+  module_interrupt_irq\ident:
     cli
     push $0x00
     push $\byte
-    jmp irq_common
+    jmp module_interrupt_irq_common
 .endm
 
 IRQ 0, 32
@@ -148,10 +151,10 @@ IRQ 13, 45
 IRQ 14, 46
 IRQ 15, 47
 
-.global irq_handler
-.type irq_handler, @function
+.global module_interrupt_irq_handler
+.type module_interrupt_irq_handler, @function
 
-irq_common:
+module_interrupt_irq_common:
   pusha
 
   push %ds
@@ -167,7 +170,7 @@ irq_common:
 
   // Call interrupt handler
   push %esp
-  call irq_handler
+  call module_interrupt_irq_handler
   add $4, %esp
 
   // Restore segment registers

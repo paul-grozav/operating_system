@@ -9,8 +9,21 @@
 // fault and reset.
 //
 // This module defines GDT & IDT + ISR
+//
+// When interrupt 3(for example) is fired, the first function called is:
+// 1. ASM: module_interrupt_isr3 (defined by ISR_NOERR 3), which calls:
+// 2. ASM: module_interrupt_isr_common, which calls:
+// 3. C: module_interrupt_isr_handler which handles the interrupt
+//
+// That first ASM call: module_interrupt_isr3 is fired because init_idt sets
+// the handlers for all interrupts. All the handlers are defined in this table:
+// module_interrupt_idt_entries and are registered by this ASM call:
+// module_interrupt_idt_flush .
 // -------------------------------------------------------------------------- //
+//! Initiate interrupt handlers.
+void module_interrupt_init();
+
 //! Test interrupts
-void module_interrupts_test();
+void module_interrupt_test();
 // -------------------------------------------------------------------------- //
 

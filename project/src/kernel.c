@@ -85,7 +85,8 @@ void kernel_main()
   module_terminal_print_char('\n');
 */
   module_terminal_global_print_c_string("Running interrupts_test ...");
-  module_interrupts_test();
+  module_interrupt_init();
+  module_interrupt_test();
   module_terminal_global_print_c_string(" Done.\n");
 
   module_terminal_global_print_c_string("\n-------------\n");
