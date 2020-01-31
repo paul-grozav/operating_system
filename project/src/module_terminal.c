@@ -9,7 +9,7 @@ module_terminal_vga *module_terminal_vga_instance = NULL;
 module_terminal_vga module_terminal_vga_create()
 {
   module_terminal_vga t;
-  t.buffer = (uint16_t*)(0xB8000);
+  t.buffer = (uint16_t*)(0xB8000); // = dec: 753664
   t.total_columns = 80;
   t.total_rows = 25;
   t.column_current = 0;

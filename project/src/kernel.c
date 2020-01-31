@@ -8,6 +8,7 @@
 #include "module_serial.h"
 #include "module_base.h"
 #include "module_interrupt.h"
+#include "module_heap.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -59,35 +60,33 @@ void kernel_main()
   module_terminal_global_print_c_string("Running serial_test ...");
   module_serial_test();
   module_terminal_global_print_c_string(" Done.\n");
-  //-----------------
-  // IDT
-  // http://www.jamesmolloy.co.uk/tutorial_html/4.-The%20GDT%20and%20IDT.html
-/*
-  module_terminal_print_char('\n');
-  uint16_t total;
-  uint8_t low_mem=0;
-  uint8_t high_mem=0;
 
-  outb(0x70, 0x30);
-  low_mem = inb(0x71);
-  outb(0x70, 0x31);
-  high_mem = inb(0x71);
-
-  total = low_mem | high_mem << 8;
-  module_terminal_print_c_string("low_mem=");
-  module_terminal_print_uint64(low_mem);
-  module_terminal_print_char('\n');
-  module_terminal_print_c_string("high_mem=");
-  module_terminal_print_uint64(high_mem);
-  module_terminal_print_char('\n');
-  module_terminal_print_c_string("total_mem=");
-  module_terminal_print_uint64(total);
-  module_terminal_print_char('\n');
-*/
   module_terminal_global_print_c_string("Running interrupts_test ...");
   module_interrupt_init();
   module_interrupt_test();
   module_terminal_global_print_c_string(" Done.\n");
+
+  //-----------------
+  module_heap_heap_bm kheap;
+  char *ptr;
+
+  // initialize the heap
+  module_terminal_global_print_c_string("Initialize heap...\n");
+  k_heapBMInit(&kheap);
+
+  // add block to heap
+  // starting 10MB mark and length of 1MB with default block size of 16 bytes
+  module_terminal_global_print_c_string("Add heap block...\n");
+  k_heapBMAddBlock(&kheap, 10*1024*1024, 1024*1024, 16);
+
+  // allocate 256 bytes (malloc)
+  module_terminal_global_print_c_string("Heap alloc...\n");
+  ptr = (char*)k_heapBMAlloc(&kheap, 256);
+
+  // free the pointer (free)
+  module_terminal_global_print_c_string("Heap free...\n");
+  k_heapBMFree(&kheap, ptr);
+  //-----------------
 
   module_terminal_global_print_c_string("\n-------------\n");
   module_terminal_global_print_c_string("Kernel ended. B`bye!");
