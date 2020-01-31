@@ -3,10 +3,11 @@
 // -------------------------------------------------------------------------- //
 #include "module_terminal.h"
 #include "module_kernel.h" // in/out byte
+#include "module_interrupt.h"
 // -------------------------------------------------------------------------- //
 // GDT
 // -------------------------------------------------------------------------- //
-struct gdt_entry
+struct module_interrupt_gdt_entry
 {
   uint16_t limit_low;
   uint16_t base_low;
@@ -16,44 +17,45 @@ struct gdt_entry
   uint8_t base_high;
 }__attribute__((packed));
 // -------------------------------------------------------------------------- //
-struct gdt_ptr
+struct module_interrupt_gdt_ptr
 {
   uint16_t limit;
   uint32_t base;
 }__attribute__((packed));
 // -------------------------------------------------------------------------- //
-void init_gdt();
+extern void module_interrupt_gdt_flush(uint32_t);
 // -------------------------------------------------------------------------- //
-extern void gdt_flush(uint32_t);
-static void gdt_set_gate(int32_t,uint32_t,uint32_t,uint8_t,uint8_t);
+void module_interrupt_init_gdt();
 // -------------------------------------------------------------------------- //
-struct gdt_entry gdt_entries[5];
-struct gdt_ptr gdt_ptr;
+static void module_interrupt_gdt_set_gate(int32_t,uint32_t,uint32_t,uint8_t,uint8_t);
 // -------------------------------------------------------------------------- //
-void init_gdt()
+struct module_interrupt_gdt_entry module_interrupt_gdt_entries[5];
+struct module_interrupt_gdt_ptr module_interrupt_gdt_ptr;
+// -------------------------------------------------------------------------- //
+void module_interrupt_init_gdt()
 {
-  gdt_ptr.limit = (sizeof(struct gdt_entry) * 5) - 1;
-  gdt_ptr.base = (uint32_t)&gdt_entries;
-  gdt_set_gate(0,0,0,0,0);
-  gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
-  gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
-  gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
-  gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
-  gdt_flush((uint32_t)&gdt_ptr);
+  module_interrupt_gdt_ptr.limit = (sizeof(struct module_interrupt_gdt_entry) * 5) - 1;
+  module_interrupt_gdt_ptr.base = (uint32_t)&module_interrupt_gdt_entries;
+  module_interrupt_gdt_set_gate(0,0,0,0,0);
+  module_interrupt_gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
+  module_interrupt_gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
+  module_interrupt_gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
+  module_interrupt_gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
+  module_interrupt_gdt_flush((uint32_t)&module_interrupt_gdt_ptr);
 }
 // -------------------------------------------------------------------------- //
-static void gdt_set_gate(int32_t num, uint32_t base, uint32_t limit,
+static void module_interrupt_gdt_set_gate(int32_t num, uint32_t base, uint32_t limit,
   uint8_t access, uint8_t granularity)
 {
-  gdt_entries[num].base_low = (base & 0xFFFF);
-  gdt_entries[num].base_middle = (base >> 16) & 0xFF;
-  gdt_entries[num].base_high = (base >> 24) & 0xFF;
+  module_interrupt_gdt_entries[num].base_low = (base & 0xFFFF);
+  module_interrupt_gdt_entries[num].base_middle = (base >> 16) & 0xFF;
+  module_interrupt_gdt_entries[num].base_high = (base >> 24) & 0xFF;
 
-  gdt_entries[num].limit_low = (limit & 0xFFFF);
-  gdt_entries[num].granularity = (limit >> 16) & 0x0F;
+  module_interrupt_gdt_entries[num].limit_low = (limit & 0xFFFF);
+  module_interrupt_gdt_entries[num].granularity = (limit >> 16) & 0x0F;
 
-  gdt_entries[num].granularity |= granularity & 0xF0;
-  gdt_entries[num].access = access;
+  module_interrupt_gdt_entries[num].granularity |= granularity & 0xF0;
+  module_interrupt_gdt_entries[num].access = access;
 }
 // -------------------------------------------------------------------------- //
 // IDT
@@ -226,14 +228,15 @@ static void idt_set_gate(uint8_t num, uint32_t base, uint16_t selector,
 #define IRQ14 46
 #define IRQ15 47
 // -------------------------------------------------------------------------- //
-struct registers
+typedef struct
 {
   uint32_t ds;
   uint32_t edi,esi,ebp,esp,ebx,edx,ecx,eax;
   uint32_t int_no,err_code;
-};
+} registers_t;
+registers_t registers;
 // -------------------------------------------------------------------------- //
-typedef void (*isr_t)(registers_t);
+typedef void (*isr_t)(registers_t x);
 void register_interrupt_handler(uint8_t n, isr_t handler);
 // -------------------------------------------------------------------------- //
 isr_t interrupt_handlers[256];
@@ -243,14 +246,14 @@ void register_interrupt_handler(uint8_t n,isr_t handler)
   interrupt_handlers[n] = handler;
 }
 // -------------------------------------------------------------------------- //
-void isr_handler(struct registers regs)
+void isr_handler(registers_t regs)
 {
   module_terminal_global_print_c_string("isr_handler: Received interrupt:");
   module_terminal_global_print_uint64(regs.int_no);
   module_terminal_global_print_char('\n');
 }
 // -------------------------------------------------------------------------- //
-void irq_handler(struct registers regs)
+void irq_handler(registers_t regs)
 {
   module_terminal_global_print_c_string("irq_handler: Received interrupt:");
   module_terminal_global_print_uint64(regs.int_no);
@@ -272,7 +275,7 @@ void irq_handler(struct registers regs)
 void module_interrupts_test()
 {
   // init GDT before IDT
-  init_gdt();
+  module_interrupt_init_gdt();
   init_idt();
 
   module_terminal_global_print_char('\n');

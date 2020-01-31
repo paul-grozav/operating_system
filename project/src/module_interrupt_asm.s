@@ -7,10 +7,10 @@
 .section .text
 .align 4
 
-.global gdt_flush
-.type gdt_flush, @function
+.global module_interrupt_gdt_flush
+.type module_interrupt_gdt_flush, @function
 
-gdt_flush:
+module_interrupt_gdt_flush:
   mov 4(%esp), %eax
   lgdt (%eax)
 
