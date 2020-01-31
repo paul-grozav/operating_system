@@ -72,20 +72,20 @@ void kernel_main()
 
   // initialize the heap
   module_terminal_global_print_c_string("Initialize heap...\n");
-  k_heapBMInit(&kheap);
+  module_heap_init(&kheap);
 
   // add block to heap
   // starting 10MB mark and length of 1MB with default block size of 16 bytes
   module_terminal_global_print_c_string("Add heap block...\n");
-  k_heapBMAddBlock(&kheap, 10*1024*1024, 1024*1024, 16);
+  module_heap_add_block(&kheap, 10*1024*1024, 1024*1024, 16);
 
   // allocate 256 bytes (malloc)
   module_terminal_global_print_c_string("Heap alloc...\n");
-  ptr = (char*)k_heapBMAlloc(&kheap, 256);
+  ptr = (char*)module_heap_alloc(&kheap, 256);
 
   // free the pointer (free)
   module_terminal_global_print_c_string("Heap free...\n");
-  k_heapBMFree(&kheap, ptr);
+  module_heap_free(&kheap, ptr);
   //-----------------
 
   module_terminal_global_print_c_string("\n-------------\n");

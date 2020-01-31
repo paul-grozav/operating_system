@@ -8,12 +8,13 @@
 //    2014 Leonard Kevin McGuire Jr (www.kmcg3413.net) (kmcg3413@gmail.com)
 //    2016 Clément Gallet (provided bug fixes)
 // -------------------------------------------------------------------------- //
-void k_heapBMInit(module_heap_heap_bm *heap)
+void module_heap_init(module_heap_heap_bm *heap)
 {
   heap->fblock = 0;
 }
 // -------------------------------------------------------------------------- //
-int k_heapBMAddBlock(module_heap_heap_bm *heap, uintptr addr, uint32_t size, uint32_t bsize)
+void module_heap_add_block(module_heap_heap_bm *heap, const uintptr_t addr,
+  const uint32_t size, const uint32_t bsize)
 {
   module_heap_heap_block_bm *b;
   uint32_t bcnt;
@@ -43,17 +44,17 @@ int k_heapBMAddBlock(module_heap_heap_bm *heap, uintptr addr, uint32_t size, uin
 
   b->lfb = bcnt - 1;
   b->used = bcnt;
-  return 1;
 }
 // -------------------------------------------------------------------------- //
-static uint8_t k_heapBMGetNID(uint8_t a, uint8_t b)
+// find ID that does not match left or right
+static uint8_t module_heap_get_nid(uint8_t a, uint8_t b)
 {
   uint8_t c;
   for (c = a + 1; c == b || c == 0; ++c);
   return c;
 }
 // -------------------------------------------------------------------------- //
-void *k_heapBMAlloc(module_heap_heap_bm *heap, uint32_t size)
+void *module_heap_alloc(module_heap_heap_bm *heap, const uint32_t size)
 {
   module_heap_heap_block_bm *b;
   uint8_t *bm;
@@ -90,7 +91,7 @@ void *k_heapBMAlloc(module_heap_heap_bm *heap, uint32_t size)
           if (y == bneed)
           {
             // find ID that does not match left or right
-            nid = k_heapBMGetNID(bm[x - 1], bm[x + y]);
+            nid = module_heap_get_nid(bm[x - 1], bm[x + y]);
 
             // allocate by setting id
             for (z = 0; z < y; ++z)
@@ -104,7 +105,7 @@ void *k_heapBMAlloc(module_heap_heap_bm *heap, uint32_t size)
             // count used blocks NOT bytes
             b->used += y;
 
-            return (void*)(x * b->bsize + (uintptr)&b[1]);
+            return (void*)(x * b->bsize + (uintptr_t)&b[1]);
           }
 
           // x will be incremented by one ONCE more in our FOR loop
@@ -117,10 +118,10 @@ void *k_heapBMAlloc(module_heap_heap_bm *heap, uint32_t size)
   return 0;
 }
 // -------------------------------------------------------------------------- //
-void k_heapBMFree(module_heap_heap_bm *heap, void *ptr)
+void module_heap_free(module_heap_heap_bm *heap, const void * const ptr)
 {
   module_heap_heap_block_bm *b;
-  uintptr ptroff;
+  uintptr_t ptroff;
   uint32_t bi, x;
   uint8_t *bm;
   uint8_t id;
@@ -128,11 +129,12 @@ void k_heapBMFree(module_heap_heap_bm *heap, void *ptr)
 
   for (b = heap->fblock; b; b = b->next)
   {
-    if ((uintptr)ptr > (uintptr)b
-      && (uintptr)ptr < (uintptr)b + sizeof(module_heap_heap_block_bm) + b->size)
+    if ((uintptr_t)ptr > (uintptr_t)b
+      && (uintptr_t)ptr < (uintptr_t)b
+      + sizeof(module_heap_heap_block_bm) + b->size)
     {
       // found block
-      ptroff = (uintptr)ptr - (uintptr)&b[1];  // get offset to get block
+      ptroff = (uintptr_t)ptr - (uintptr_t)&b[1];  // get offset to get block
       // block offset in BM
       bi = ptroff / b->bsize;
       // ..
