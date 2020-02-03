@@ -151,9 +151,12 @@ IRQ 13, 45
 IRQ 14, 46
 IRQ 15, 47
 
+// Making it global, allows the C code to call this function
 .global module_interrupt_irq_handler
 .type module_interrupt_irq_handler, @function
 
+// bad ?
+/*
 module_interrupt_irq_common:
   pusha
 
@@ -184,6 +187,47 @@ module_interrupt_irq_common:
   // Cleanup error code and IRQ #
   add $8, %esp
   // pop CS, EIP, EFLAGS, SS and ESP
+  iret
+*/
+
+
+// This is our common IRQ stub. It saves the processor state, sets
+// up for kernel mode segments, calls the C-level fault handler,
+// and finally restores the stack frame.
+module_interrupt_irq_common:
+  // Pushes edi, esi, ebp, esp, ebx, edx, ecx, eax
+  pusha
+
+  // Lower 16-bits of eax = ds.
+  mov %ds,%ax
+
+  // save the data segment descriptor
+  push %eax
+
+  // load the kernel data segment descriptor
+  mov $0x10, %ax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %gs
+
+  // Call C handler
+  call module_interrupt_irq_handler
+
+  // reload the original data segment descriptor
+  pop %eax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %gs
+
+  // Pop edi, esi, ebp, esp, ebx, edx, ecx, eax
+  popa
+
+  // Cleans up the pushed error code and pushed ISR number
+  add $8, %esp
+  // sti ?
+  // pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
   iret
 // -------------------------------------------------------------------------- //
 

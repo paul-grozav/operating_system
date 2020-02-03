@@ -243,12 +243,6 @@ void module_interrupt_init_idt()
 #define IRQ14 46
 #define IRQ15 47
 // -------------------------------------------------------------------------- //
-typedef struct
-{
-  uint32_t ds;
-  uint32_t edi,esi,ebp,esp,ebx,edx,ecx,eax;
-  uint32_t int_no,err_code;
-} module_interrupt_registers_t;
 module_interrupt_registers_t module_interrupt_registers;
 // -------------------------------------------------------------------------- //
 typedef void (*module_interrupt_isr_t)(module_interrupt_registers_t x);
@@ -275,18 +269,27 @@ void module_interrupt_irq_handler(module_interrupt_registers_t regs)
   module_terminal_global_print_c_string("irq_handler: Received interrupt:");
   module_terminal_global_print_uint64(regs.int_no);
   module_terminal_global_print_char('\n');
-  asm volatile ("hlt"); // halt cpu
+//  asm volatile ("hlt"); // halt cpu
+//  return;
 
   if (regs.int_no >= 40)
   {
     module_kernel_out_byte(0xA0,0x20);
   }
   module_kernel_out_byte(0x20,0x20);
+
   if (module_interrupt_interrupt_handlers[regs.int_no] != 0 )
   {
     module_interrupt_isr_t handler =
       module_interrupt_interrupt_handlers[regs.int_no];
     handler(regs);
+  }
+  else
+  {
+    module_terminal_global_print_c_string("irq_handler: No handler registered"
+      " for interrupt: ");
+    module_terminal_global_print_uint64(regs.int_no);
+    module_terminal_global_print_c_string(" !");
   }
 }
 // -------------------------------------------------------------------------- //
@@ -301,8 +304,17 @@ void module_interrupt_test()
 {
   // make sure you've called module_interrupt_init() first.
   module_terminal_global_print_char('\n');
-  asm volatile ("int $0x3"); // call interrupt 3
-  asm volatile ("int $0x10"); // call interrupt 16(10 in hex)
+  asm volatile ("int $0x3"); // call software interrupt 3
+}
+// -------------------------------------------------------------------------- //
+void module_interrupt_enable()
+{
+  asm volatile ("sti");
+}
+// -------------------------------------------------------------------------- //
+void module_interrupt_disable()
+{
+  asm volatile ("cli");
 }
 // -------------------------------------------------------------------------- //
 

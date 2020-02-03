@@ -20,10 +20,32 @@
 // module_interrupt_idt_entries and are registered by this ASM call:
 // module_interrupt_idt_flush .
 // -------------------------------------------------------------------------- //
+//! Structure received by interrupt handler
+typedef struct
+{
+  //! Data segment selector
+  uint32_t ds;
+
+  //! Pushed by pusha.
+  uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
+
+  //! Interrupt number and error code (if applicable)
+  uint32_t int_no, err_code;
+
+  //! Pushed by the processor automatically.
+  uint32_t eip, cs, eflags, useresp, ss;
+} module_interrupt_registers_t;
+
 //! Initiate interrupt handlers.
 void module_interrupt_init();
 
 //! Test interrupts
 void module_interrupt_test();
+
+//! Enable interrupts. Allow the CPU to be interrupted.
+void module_interrupt_enable();
+
+//! Disable interrupts. Do not allow the CPU to be interrupted.
+void module_interrupt_disable();
 // -------------------------------------------------------------------------- //
 

@@ -1424,15 +1424,15 @@ void
 vga_set_graphic() {
 
   write_regs(g_320x200x256);
+//  write_regs(g_640x480x16);
   vga_write_pixel = write_pixel8;// 4-bit = 16 colors
   putpixel = vga_write_pixel;
   clear_screen = vga_clear;
   // fb = (uint8_t*)vga_get_fb();
 	fb = (uint8_t*)kmalloc(width * height * ( depth >> 3 ));
 
-  width  = 320;
-  height = 200;
-  depth  = 8;
+  width  = 320;  height = 200;  depth  = 8;
+//  width  = 640;  height = 480;  depth  = 8;
 
 	vga_set_RRRGGGBB();
 
