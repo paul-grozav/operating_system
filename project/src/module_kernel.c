@@ -6,7 +6,7 @@
 // -------------------------------------------------------------------------- //
 // In/Out bytes
 // -------------------------------------------------------------------------- //
-void module_kernel_out_byte(const uint16_t port, const uint8_t value)
+void module_kernel_out_8(const uint16_t port, const uint8_t value)
 {
   // There's an outb %al, $imm8  encoding, for compile-time constant port
   // numbers that fit in 8b. (N constraint).
@@ -18,10 +18,34 @@ void module_kernel_out_byte(const uint16_t port, const uint8_t value)
   asm volatile("outb %0, %1" : : "a"(value), "Nd"(port));
 }
 // -------------------------------------------------------------------------- //
-uint8_t module_kernel_in_byte(const uint16_t port)
+uint8_t module_kernel_in_8(const uint16_t port)
 {
   uint8_t ret;
   asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
+  return ret;
+}
+// -------------------------------------------------------------------------- //
+void module_kernel_out_16(const uint32_t port, const uint16_t value)
+{
+  __asm__ __volatile__("outw %%ax,%%dx"::"d" (port), "a" (value));
+}
+// -------------------------------------------------------------------------- //
+uint16_t module_kernel_in_16(const uint32_t port)
+{
+  uint16_t ret;
+  __asm__ __volatile__("inw %%dx,%%ax":"=a" (ret):"d"(port));
+  return ret;
+}
+// -------------------------------------------------------------------------- //
+void module_kernel_out_32(const uint32_t port, const uint32_t value)
+{
+  __asm__ __volatile__("outl %%eax,%%dx"::"d" (port), "a" (value));
+}
+// -------------------------------------------------------------------------- //
+uint32_t module_kernel_in_32(const uint32_t port)
+{
+  uint32_t ret;
+  __asm__ __volatile__("inl %%dx,%%eax":"=a" (ret):"d"(port));
   return ret;
 }
 // -------------------------------------------------------------------------- //
@@ -33,6 +57,14 @@ void module_kernel_memset(void *start, const char value, const size_t length)
   for(size_t i=0; i<length; i++)
   {
     buffer[i] = value;
+  }
+}
+// -------------------------------------------------------------------------- //
+void module_kernel_memcpy(void* source, void* destination, const size_t size)
+{
+  for(size_t i=0; i<size; i++)
+  {
+    ((uint8_t*)destination)[i] = ((uint8_t*)source)[i];
   }
 }
 // -------------------------------------------------------------------------- //

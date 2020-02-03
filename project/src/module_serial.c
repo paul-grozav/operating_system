@@ -11,43 +11,43 @@
 void init_serial()
 {
   // Disable all interrupts
-  module_kernel_out_byte(PORT + 1, 0x00);
+  module_kernel_out_8(PORT + 1, 0x00);
   // Enable DLAB (set baud rate divisor)
-  module_kernel_out_byte(PORT + 3, 0x80);
+  module_kernel_out_8(PORT + 3, 0x80);
   // Set divisor to 3 (lo byte) 38400 baud
-  module_kernel_out_byte(PORT + 0, 0x03);
+  module_kernel_out_8(PORT + 0, 0x03);
   //                  (hi byte)
-  module_kernel_out_byte(PORT + 1, 0x00);
+  module_kernel_out_8(PORT + 1, 0x00);
   // 8 bits, no parity, one stop bit
-  module_kernel_out_byte(PORT + 3, 0x03);
+  module_kernel_out_8(PORT + 3, 0x03);
   // Enable FIFO, clear them, with 14-byte threshold
-  module_kernel_out_byte(PORT + 2, 0xC7);
+  module_kernel_out_8(PORT + 2, 0xC7);
   // IRQs enabled, RTS/DSR set
-  module_kernel_out_byte(PORT + 4, 0x0B);
+  module_kernel_out_8(PORT + 4, 0x0B);
 }
 // -------------------------------------------------------------------------- //
 // Sending data
 int is_transmit_empty()
 {
-  return module_kernel_in_byte(PORT + 5) & 0x20;
+  return module_kernel_in_8(PORT + 5) & 0x20;
 }
 // -------------------------------------------------------------------------- //
 void write_serial(const char a)
 {
   while (is_transmit_empty() == 0);
-  module_kernel_out_byte(PORT, a);
+  module_kernel_out_8(PORT, a);
 }
 // -------------------------------------------------------------------------- //
 // Receiving data
 int serial_received()
 {
-  return module_kernel_in_byte(PORT + 5) & 1;
+  return module_kernel_in_8(PORT + 5) & 1;
 }
 // -------------------------------------------------------------------------- //
 char read_serial()
 {
   while (serial_received() == 0);
-  return module_kernel_in_byte(PORT);
+  return module_kernel_in_8(PORT);
 }
 // -------------------------------------------------------------------------- //
 void module_serial_print_c_string(const char* str)

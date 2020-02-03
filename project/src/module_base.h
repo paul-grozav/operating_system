@@ -1,6 +1,9 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
+#ifndef MODULE_BASE_H
+#define MODULE_BASE_H
+// -------------------------------------------------------------------------- //
 /**
  * Convert a uint64 to ascii base 10.
  * @param number - a copy of the number, this is altered as the function creates
@@ -31,5 +34,7 @@ size_t uint64_to_ascii_base10(uint64_t number, char * const output_buffer);
  * value.
  */
 size_t uint64_to_ascii_base16(uint64_t number, char * const output_buffer);
+// -------------------------------------------------------------------------- //
+#endif // header guard
 // -------------------------------------------------------------------------- //
 

@@ -20,6 +20,9 @@
 // module_interrupt_idt_entries and are registered by this ASM call:
 // module_interrupt_idt_flush .
 // -------------------------------------------------------------------------- //
+#ifndef MODULE_INTERRUPT_H
+#define MODULE_INTERRUPT_H
+// -------------------------------------------------------------------------- //
 //! Structure received by interrupt handler
 typedef struct
 {
@@ -36,6 +39,17 @@ typedef struct
   uint32_t eip, cs, eflags, useresp, ss;
 } module_interrupt_registers_t;
 
+//! Interrupt handler type
+typedef void (*module_interrupt_isr_t)(module_interrupt_registers_t x);
+
+/**
+ * Register an interrupt handler for the given interrupt.
+ * @param[in] n - Interrupt number for which to call the handler.
+ * @param[in, out] handler - function to be called
+ */
+void module_interrupt_register_interrupt_handler(const uint8_t n,
+  const module_interrupt_isr_t handler);
+
 //! Initiate interrupt handlers.
 void module_interrupt_init();
 
@@ -47,5 +61,7 @@ void module_interrupt_enable();
 
 //! Disable interrupts. Do not allow the CPU to be interrupted.
 void module_interrupt_disable();
+// -------------------------------------------------------------------------- //
+#endif // header guard
 // -------------------------------------------------------------------------- //
 

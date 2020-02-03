@@ -159,18 +159,20 @@ void module_interrupt_init_idt()
   module_kernel_memset(&module_interrupt_idt_entries, 0,
     sizeof(struct module_interrupt_idt_entry) * 256);
 
-  module_kernel_out_byte(0x20, 0x11);
-  module_kernel_out_byte(0xA0, 0x11);
-  module_kernel_out_byte(0x21, 0x20);
-  module_kernel_out_byte(0xA1, 0x28);
-  module_kernel_out_byte(0x21, 0x04);
-  module_kernel_out_byte(0xA1, 0x02);
-  module_kernel_out_byte(0x21, 0x01);
-  module_kernel_out_byte(0xA1, 0x01);
-  module_kernel_out_byte(0x21, 0x0);
-  module_kernel_out_byte(0xA1, 0x0);
+  module_kernel_out_8(0x20, 0x11);
+  module_kernel_out_8(0xA0, 0x11);
+  module_kernel_out_8(0x21, 0x20);
+  module_kernel_out_8(0xA1, 0x28);
+  module_kernel_out_8(0x21, 0x04);
+  module_kernel_out_8(0xA1, 0x02);
+  module_kernel_out_8(0x21, 0x01);
+  module_kernel_out_8(0xA1, 0x01);
+  module_kernel_out_8(0x21, 0x0);
+  module_kernel_out_8(0xA1, 0x0);
 
   // instructions for which functions should be called for which interrupts
+  // Common practice is to leave the first 32 vectors for exceptions, as
+  // mandated by Intel.
   module_interrupt_idt_set_gate(0,(uint32_t)module_interrupt_isr0,0x08,0x8E);
   module_interrupt_idt_set_gate(1,(uint32_t)module_interrupt_isr1,0x08,0x8E);
   module_interrupt_idt_set_gate(2,(uint32_t)module_interrupt_isr2,0x08,0x8E);
@@ -203,6 +205,28 @@ void module_interrupt_init_idt()
   module_interrupt_idt_set_gate(29,(uint32_t)module_interrupt_isr29,0x08,0x8E);
   module_interrupt_idt_set_gate(30,(uint32_t)module_interrupt_isr30,0x08,0x8E);
   module_interrupt_idt_set_gate(31,(uint32_t)module_interrupt_isr31,0x08,0x8E);
+
+  // Interrupts table
+  // Items are numbered from 0-15, but actual interrupt number is +32
+  //-----------
+  // IRQ  Description
+  // 0    Programmable Interrupt Timer Interrupt
+  // 1    Keyboard Interrupt
+  // 2    Cascade (used internally by the two PICs. never raised)
+  // 3    COM2 (if enabled)
+  // 4    COM1 (if enabled)
+  // 5    LPT2 (if enabled)
+  // 6    Floppy Disk
+  // 7    LPT1 / Unreliable "spurious" interrupt (usually)
+  // 8    CMOS real-time clock (if enabled)
+  // 9    Free for peripherals / legacy SCSI / NIC
+  // 10   Free for peripherals / SCSI / NIC
+  // 11   Free for peripherals / SCSI / NIC
+  // 12   PS2 Mouse
+  // 13   FPU / Coprocessor / Inter-processor
+  // 14   Primary ATA Hard Disk
+  // 15   Secondary ATA Hard Disk
+  //-----------
   module_interrupt_idt_set_gate(32,(uint32_t)module_interrupt_irq0,0x08,0x8E);
   module_interrupt_idt_set_gate(33,(uint32_t)module_interrupt_irq1,0x08,0x8E);
   module_interrupt_idt_set_gate(34,(uint32_t)module_interrupt_irq2,0x08,0x8E);
@@ -245,14 +269,10 @@ void module_interrupt_init_idt()
 // -------------------------------------------------------------------------- //
 module_interrupt_registers_t module_interrupt_registers;
 // -------------------------------------------------------------------------- //
-typedef void (*module_interrupt_isr_t)(module_interrupt_registers_t x);
-void module_interrupt_register_interrupt_handler(uint8_t n,
-  module_interrupt_isr_t handler);
-// -------------------------------------------------------------------------- //
 module_interrupt_isr_t module_interrupt_interrupt_handlers[256];
 // -------------------------------------------------------------------------- //
-void module_interrupt_register_interrupt_handler(uint8_t n,
-  module_interrupt_isr_t handler)
+void module_interrupt_register_interrupt_handler(const uint8_t n,
+  const module_interrupt_isr_t handler)
 {
   module_interrupt_interrupt_handlers[n] = handler;
 }
@@ -269,14 +289,12 @@ void module_interrupt_irq_handler(module_interrupt_registers_t regs)
   module_terminal_global_print_c_string("irq_handler: Received interrupt:");
   module_terminal_global_print_uint64(regs.int_no);
   module_terminal_global_print_char('\n');
-//  asm volatile ("hlt"); // halt cpu
-//  return;
 
   if (regs.int_no >= 40)
   {
-    module_kernel_out_byte(0xA0,0x20);
+    module_kernel_out_8(0xA0,0x20);
   }
-  module_kernel_out_byte(0x20,0x20);
+  module_kernel_out_8(0x20,0x20);
 
   if (module_interrupt_interrupt_handlers[regs.int_no] != 0 )
   {
@@ -291,6 +309,8 @@ void module_interrupt_irq_handler(module_interrupt_registers_t regs)
     module_terminal_global_print_uint64(regs.int_no);
     module_terminal_global_print_c_string(" !");
   }
+  // Enable  interrupts so that other could be handled
+  module_interrupt_enable();
 }
 // -------------------------------------------------------------------------- //
 void module_interrupt_init()

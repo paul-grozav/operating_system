@@ -1,6 +1,9 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
+#ifndef MODULE_TERMINAL_H
+#define MODULE_TERMINAL_H
+// -------------------------------------------------------------------------- //
 #include <stddef.h> // size_t
 #include <stdint.h> // uintX
 // -------------------------------------------------------------------------- //
@@ -91,4 +94,5 @@ void module_terminal_global_print_hex_uint64(const uint64_t i);
 //! Print unsigned 64 bit integer as hex(base 16) on the given screen.
 void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t);
 // -------------------------------------------------------------------------- //
-
+#endif // header guard
+// -------------------------------------------------------------------------- //

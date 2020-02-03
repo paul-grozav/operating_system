@@ -19,15 +19,15 @@
   #error "This code must be compiled with an x86-elf compiler"
 #endif
 // -------------------------------------------------------------------------- //
-#define outportb(a,b) module_kernel_out_byte(a,b)
+#define outportb(a,b) module_kernel_out_8(a,b)
 void waitch()
 {
   int key;
   while ( 1 )
   {
 /*
-    module_kernel_out_byte(0x20, 0x20); // Send EOI
-    unsigned char c = module_kernel_in_byte( 0x60 );
+    module_kernel_out_8(0x20, 0x20); // Send EOI
+    unsigned char c = module_kernel_in_8( 0x60 );
     if((c & 128) == 128)
       module_terminal_global_print_c_string("RELEASE\n");
     else
@@ -35,8 +35,8 @@ void waitch()
 */
 ///
     // wait for key
-    while ((module_kernel_in_byte(0x64) & 1) == 0);
-    key = module_kernel_in_byte( 0x60 ); // same as inb- use yours
+    while ((module_kernel_in_8(0x64) & 1) == 0);
+    key = module_kernel_in_8( 0x60 ); // same as inb- use yours
     module_terminal_global_print_uint64(key);
     if ( key & 0x80 ) continue;
     if ( key != 0 ) return;

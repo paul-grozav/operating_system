@@ -9,9 +9,14 @@
 #define FALSE 0
 #define TRUE  1
 #define printf(V) module_terminal_global_print_c_string(V)
-#define inportb(a)  module_kernel_in_byte(a)
-#define outportb(a,b)  module_kernel_out_byte(a,b)
+#define inportb(a)  module_kernel_in_8(a)
+#define outportb(a,b)  module_kernel_out_8(a,b)
+//#define inportw(a)  module_kernel_in_16(a)
+//#define outportw(a,b)  module_kernel_out_16(a,b)
+//#define inportl(a)  module_kernel_in_32(a)
+//#define outportl(a,b)  module_kernel_out_32(a,b)
 #define memset(a,b,c)  module_kernel_memset(a,b,c)
+#define memcpy(a,b,c)  module_kernel_memcpy(a,b,c)
 module_heap_heap_bm *heap;
 #define kmalloc(a) module_heap_alloc(heap, a)
 
@@ -23,6 +28,7 @@ module_heap_heap_bm *heap;
 void (*putchar)(uint8_t c);
 void (*clear_screen)(uint8_t c);
 
+/*
 void
 memcpy(void* src, void* dst, uint32_t size) {
   uint32_t i = 0;
@@ -51,10 +57,11 @@ uint16_t inportw(uint32_t port){
 void outportw(uint32_t port, uint16_t value){
 	   __asm__ __volatile__("outw %%ax,%%dx"::"d" (port), "a" (value));
 };
-#define outl(a,b)  outportl(a,b)
-#define inl(a)  inportl(a)
-#define outw(a,b)  outportw(a,b)
-#define inw(a)  inportw(a)
+*/
+//#define outl(a,b)  outportl(a,b)
+//#define inl(a)  inportl(a)
+//#define outw(a,b)  outportw(a,b)
+//#define inw(a)  inportw(a)
 
 
 
@@ -121,12 +128,12 @@ void
 vga_putchar(uint32_t x, uint32_t y, uint8_t fgcolor, uint8_t bgcolor, const char c);
 
 #endif
-/** 
+/**
  * 8x8 monochrome bitmap fonts for rendering
  * Author: Daniel Hepper <daniel@hepper.net>
- * 
+ *
  * License: Public Domain
- * 
+ *
  * Based on:
  * // Summary: font8x8.h
  * // 8x8 monochrome bitmap fonts for rendering
@@ -137,7 +144,7 @@ vga_putchar(uint32_t x, uint32_t y, uint8_t fgcolor, uint8_t bgcolor, const char
  * //
  * // License:
  * //     Public Domain
- * 
+ *
  * Fetched from: http://dimensionalrift.homelinux.net/combuster/mos3/?p=viewsource&file=/modules/gfx/font8_8.asm
  **/
 
