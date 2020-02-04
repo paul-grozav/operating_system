@@ -32,7 +32,7 @@ uint8_t module_kernel_in_8(const uint16_t port);
  * @param[in] value - 16 bits (2 bytes) unsigned integer value that will be set.
  * @note this is an implementation of outportw
  */
-void module_kernel_out_16(const uint16_t port, const uint16_t value)
+void module_kernel_out_16(const uint16_t port, const uint16_t value);
 
 /**
  * Read a 16 bit unsigned integer from the given port
@@ -40,7 +40,7 @@ void module_kernel_out_16(const uint16_t port, const uint16_t value)
  * @return the unsigned 16 bits value read from the given port.
  * @note this is an implementation of inportw
  */
-uint32_t module_kernel_in_16(const uint16_t port);
+uint16_t module_kernel_in_16(const uint16_t port);
 
 /**
  * Write a 32 bit unsigned integer value to the given port.
@@ -48,7 +48,7 @@ uint32_t module_kernel_in_16(const uint16_t port);
  * @param[in] value - 32 bits (4 bytes) unsigned integer value that will be set.
  * @note this is an implementation of outportl
  */
-void module_kernel_out_32(const uint16_t port, const uint32_t value)
+void module_kernel_out_32(const uint16_t port, const uint32_t value);
 
 /**
  * Read a 32 bit unsigned integer from the given port

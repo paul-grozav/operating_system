@@ -10,6 +10,7 @@
 #include "module_interrupt.h"
 #include "module_heap.h"
 #include "module_video.h"
+#include "module_keyboard.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -18,103 +19,6 @@
 #elif !defined(__i386__)
   #error "This code must be compiled with an x86-elf compiler"
 #endif
-// -------------------------------------------------------------------------- //
-#define outportb(a,b) module_kernel_out_8(a,b)
-void waitch()
-{
-  int key;
-  while ( 1 )
-  {
-/*
-    module_kernel_out_8(0x20, 0x20); // Send EOI
-    unsigned char c = module_kernel_in_8( 0x60 );
-    if((c & 128) == 128)
-      module_terminal_global_print_c_string("RELEASE\n");
-    else
-      module_terminal_global_print_c_string("PRESS\n");
-*/
-///
-    // wait for key
-    while ((module_kernel_in_8(0x64) & 1) == 0);
-    key = module_kernel_in_8( 0x60 ); // same as inb- use yours
-    module_terminal_global_print_uint64(key);
-    if ( key & 0x80 ) continue;
-    if ( key != 0 ) return;
-    else if ( key == 0 ) continue;
-//*/
-  }
-}
-
-#define IRQ_BASE 0x20
-#define PIC_MASTER_CTRL 0x20
-#define PIC_MASTER_DATA 0x21
-#define PIC_SLAVE_CTRL 0xA0
-#define PIC_SLAVE_DATA  0xA1
-
-void
-pic(void) {
-
-    // ICW1
-    outportb(PIC_MASTER_CTRL, 0x11);  // init master PIC
-    outportb(PIC_SLAVE_CTRL, 0x11);   // init slave PIC
-    // ICW2
-    outportb(PIC_MASTER_DATA, 0x20);  // IRQ 0..7 remaped to 0x20..0x27
-    outportb(PIC_SLAVE_DATA, 0x28);   // IRQ 8..15 remaped to 0x28..0x37
-    // ICW3
-    outportb(PIC_MASTER_DATA, 0x04);  // set as Master
-    outportb(PIC_SLAVE_DATA, 0x02);   // set as Slave
-    // ICW4
-    outportb(PIC_MASTER_DATA, 0x01);  // set x86 mode
-    outportb(PIC_SLAVE_DATA, 0x01);   // set x86 mode
-
-    outportb(PIC_MASTER_DATA, 0xFF);  // all interrupts disabled
-    outportb(PIC_SLAVE_DATA, 0xFF);
-
-    __asm__ __volatile__("nop");
-}
-
-
-static uint16_t ocw1 = 0xFFFB;
-
-void irq_enable(uint8_t irq)
-{
-	ocw1 &= (uint16_t)~((1 << irq));
-
-	if (irq < 8)
-		outportb(PIC_MASTER_DATA, (uint8_t)(ocw1 & 0xFF));
-	else
-		outportb(PIC_SLAVE_DATA, (uint8_t)(ocw1 >> 8));
-}
-
-void irq1_handler(module_interrupt_registers_t x)
-{
-  module_terminal_global_print_c_string("IRQ1 handler\n");
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // -------------------------------------------------------------------------- //
 // This is our kernel's main function
 void kernel_main()
@@ -126,7 +30,13 @@ void kernel_main()
   module_terminal_vga terminal = module_terminal_vga_create();
   module_terminal_vga_instance = &terminal;
   // Initiate(clear) terminal
-  module_terminal_global_init();
+  module_terminal_global_init(1);
+
+//  for(size_t i=0; i<50; i++)
+//  {
+//    module_terminal_global_print_uint8(i);
+//    module_terminal_global_print_char('\n');
+//  }
 //  asm volatile ("hlt"); // halt cpu
 
   // Display some messages
@@ -187,18 +97,76 @@ void kernel_main()
   module_heap_free(&kheap, ptr);
   // heap end
 
-  //-----------------
-  pic();
-//  IRQ_SET_HANDLER(1, keyboard_handler);
-  module_interrupt_register_interrupt_handler(1, irq1_handler);
-  irq_enable(1);
-//  waitch();
-//  module_video_test(&kheap);
+  module_terminal_global_print_c_string("Enabling keyboard...\n");
+  module_keyboard_enable();
+  module_terminal_global_print_c_string("Enabling interrupts...\n");
   module_interrupt_enable();
-  while(1);//avoid hang.wait kb
+
+  //-----------------
+//  module_video_test(&kheap);
+
+  while(1); // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core 100
 
   module_terminal_global_print_c_string("\n-------------\n");
   module_terminal_global_print_c_string("Kernel ended. B`bye!");
 }
+// -------------------------------------------------------------------------- //
+// Junk follows
+// -------------------------------------------------------------------------- //
+/*
+//  pic();
+//  waitch();
+void waitch()
+{
+  int key;
+  while ( 1 )
+  {
+
+//    module_kernel_out_8(0x20, 0x20); // Send EOI
+//    unsigned char c = module_kernel_in_8( 0x60 );
+//    if((c & 128) == 128)
+//      module_terminal_global_print_c_string("RELEASE\n");
+//    else
+//      module_terminal_global_print_c_string("PRESS\n");
+
+    // wait for key
+    while ((module_kernel_in_8(0x64) & 1) == 0);
+    key = module_kernel_in_8( 0x60 ); // same as inb- use yours
+    module_terminal_global_print_uint64(key);
+    if ( key & 0x80 ) continue;
+    if ( key != 0 ) return;
+    else if ( key == 0 ) continue;
+  }
+}
+*/
+/*
+#define IRQ_BASE 0x20
+#define PIC_MASTER_CTRL 0x20
+#define PIC_MASTER_DATA 0x21
+#define PIC_SLAVE_DATA  0xA1
+#define PIC_SLAVE_CTRL 0xA0
+
+void
+pic(void) {
+
+    // ICW1
+    outportb(PIC_MASTER_CTRL, 0x11);  // init master PIC
+    outportb(PIC_SLAVE_CTRL, 0x11);   // init slave PIC
+    // ICW2
+    outportb(PIC_MASTER_DATA, 0x20);  // IRQ 0..7 remaped to 0x20..0x27
+    outportb(PIC_SLAVE_DATA, 0x28);   // IRQ 8..15 remaped to 0x28..0x37
+    // ICW3
+    outportb(PIC_MASTER_DATA, 0x04);  // set as Master
+    outportb(PIC_SLAVE_DATA, 0x02);   // set as Slave
+    // ICW4
+    outportb(PIC_MASTER_DATA, 0x01);  // set x86 mode
+    outportb(PIC_SLAVE_DATA, 0x01);   // set x86 mode
+
+    outportb(PIC_MASTER_DATA, 0xFF);  // all interrupts disabled
+    outportb(PIC_SLAVE_DATA, 0xFF);
+
+    __asm__ __volatile__("nop");
+}
+*/
 // -------------------------------------------------------------------------- //
 

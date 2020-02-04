@@ -25,24 +25,24 @@ uint8_t module_kernel_in_8(const uint16_t port)
   return ret;
 }
 // -------------------------------------------------------------------------- //
-void module_kernel_out_16(const uint32_t port, const uint16_t value)
+void module_kernel_out_16(const uint16_t port, const uint16_t value)
 {
   __asm__ __volatile__("outw %%ax,%%dx"::"d" (port), "a" (value));
 }
 // -------------------------------------------------------------------------- //
-uint16_t module_kernel_in_16(const uint32_t port)
+uint16_t module_kernel_in_16(const uint16_t port)
 {
   uint16_t ret;
   __asm__ __volatile__("inw %%dx,%%ax":"=a" (ret):"d"(port));
   return ret;
 }
 // -------------------------------------------------------------------------- //
-void module_kernel_out_32(const uint32_t port, const uint32_t value)
+void module_kernel_out_32(const uint16_t port, const uint32_t value)
 {
   __asm__ __volatile__("outl %%eax,%%dx"::"d" (port), "a" (value));
 }
 // -------------------------------------------------------------------------- //
-uint32_t module_kernel_in_32(const uint32_t port)
+uint32_t module_kernel_in_32(const uint16_t port)
 {
   uint32_t ret;
   __asm__ __volatile__("inl %%dx,%%eax":"=a" (ret):"d"(port));

@@ -2,9 +2,11 @@
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
 #include "module_terminal.h"
+#include "module_kernel.h"
 #include "module_base.h"
 // -------------------------------------------------------------------------- //
 module_terminal_vga *module_terminal_vga_instance = NULL;
+void module_terminal_global_update_cursor();
 // -------------------------------------------------------------------------- //
 module_terminal_vga module_terminal_vga_create()
 {
@@ -15,11 +17,18 @@ module_terminal_vga module_terminal_vga_create()
   t.column_current = 0;
   t.row_current = 0;
   t.color = 0x0F;
+  t.should_show_cursor = 0;
   return t;
 }
 // -------------------------------------------------------------------------- //
-void module_terminal_global_init()
+void module_terminal_global_init(const uint8_t should_show_cursor)
 {
+  module_terminal_vga_instance->should_show_cursor = should_show_cursor;
+  if(module_terminal_vga_instance->should_show_cursor == 1)
+  {
+    module_terminal_global_enable_cursor();
+    module_terminal_global_enable_cursor();
+  }
   module_terminal_init(module_terminal_vga_instance);
 }
 // -------------------------------------------------------------------------- //
@@ -46,6 +55,7 @@ void module_terminal_init(module_terminal_vga *t)
 void module_terminal_global_print_char(const char c)
 {
   module_terminal_print_char(c, module_terminal_vga_instance);
+  module_terminal_global_update_cursor();
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_print_char(const char c, module_terminal_vga *t)
@@ -82,13 +92,25 @@ void module_terminal_print_char(const char c, module_terminal_vga *t)
   if (t->row_current >= t->total_rows)
   {
     t->column_current = 0;
-    t->row_current = 0;
+//    t->row_current = 0;
+    t->row_current = t->total_rows-1;
+    const size_t index = (t->total_columns * t->row_current)
+      + t->column_current;
+    module_kernel_memcpy(
+      (uint8_t*)(t->buffer + t->total_columns),
+      (uint8_t*)(t->buffer),
+      2* (t->total_rows -1) * t->total_columns); // 2* because 2bytes/character 
+    for(size_t i=0; i < t->total_columns; i++)
+    {
+      (t->buffer)[index+i] = ((uint16_t)(t->color) << 8) | ' ';
+    }
   }
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_global_print_c_string(const char* str)
 {
   module_terminal_print_c_string(str, module_terminal_vga_instance);
+  module_terminal_global_update_cursor();
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
@@ -103,6 +125,7 @@ void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
 void module_terminal_global_print_uint8(const uint8_t i)
 {
   module_terminal_print_uint8(i, module_terminal_vga_instance);
+  module_terminal_global_update_cursor();
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t)
@@ -127,6 +150,7 @@ void module_terminal_print_uint8(const uint8_t i, module_terminal_vga *t)
 void module_terminal_global_print_uint64(const uint64_t i)
 {
   module_terminal_print_uint64(i, module_terminal_vga_instance);
+  module_terminal_global_update_cursor();
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_print_uint64(const uint64_t i, module_terminal_vga *t)
@@ -140,6 +164,7 @@ void module_terminal_print_uint64(const uint64_t i, module_terminal_vga *t)
 void module_terminal_global_print_hex_uint64(const uint64_t i)
 {
   module_terminal_print_hex_uint64(i, module_terminal_vga_instance);
+  module_terminal_global_update_cursor();
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t)
@@ -150,6 +175,40 @@ void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t)
   const size_t l = uint64_to_ascii_base16(i, buffer+2);
   buffer[2+l] = '\0';
   module_terminal_print_c_string(buffer, t);
+}
+// -------------------------------------------------------------------------- //
+// Cursor
+// -------------------------------------------------------------------------- //
+void module_terminal_global_enable_cursor()
+{
+//  module_kernel_out_8(0x3D4, 0x0A);
+//  module_kernel_out_8(0x3D5,
+//    (module_kernel_in_8(0x3D5) & 0xC0) | cursor_start);
+//  module_kernel_out_8(0x3D4, 0x0B);
+//  module_kernel_out_8(0x3D5, (module_kernel_in_8(0x3D5) & 0xE0) | cursor_end);
+
+  module_kernel_out_8(0x3D4, 0x0A);
+  module_kernel_out_8(0x3D5, (module_kernel_in_8(0x3D5) & 0xC0));
+  module_kernel_out_8(0x3D4, 0x0B);
+  // 15 = scanline size of cursor
+  module_kernel_out_8(0x3D5, (module_kernel_in_8(0x3E0) & 0xE0) | 15);
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_global_disable_cursor()
+{
+  module_kernel_out_8(0x3D4, 0x0A);
+  module_kernel_out_8(0x3D5, 0x20);
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_global_update_cursor()
+{
+  const size_t index = (module_terminal_vga_instance->total_columns
+    * module_terminal_vga_instance->row_current)
+    + module_terminal_vga_instance->column_current;
+  module_kernel_out_8(0x3D4, 0x0F);
+  module_kernel_out_8(0x3D5, (uint8_t) (index & 0xFF));
+  module_kernel_out_8(0x3D4, 0x0E);
+  module_kernel_out_8(0x3D5, (uint8_t) ((index >> 8) & 0xFF));
 }
 // -------------------------------------------------------------------------- //
 

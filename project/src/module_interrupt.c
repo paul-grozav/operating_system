@@ -286,9 +286,9 @@ void module_interrupt_isr_handler(module_interrupt_registers_t regs)
 // -------------------------------------------------------------------------- //
 void module_interrupt_irq_handler(module_interrupt_registers_t regs)
 {
-  module_terminal_global_print_c_string("irq_handler: Received interrupt:");
-  module_terminal_global_print_uint64(regs.int_no);
-  module_terminal_global_print_char('\n');
+//  module_terminal_global_print_c_string("irq_handler: Received interrupt:");
+//  module_terminal_global_print_uint64(regs.int_no);
+//  module_terminal_global_print_char('\n');
 
   if (regs.int_no >= 40)
   {
@@ -310,7 +310,7 @@ void module_interrupt_irq_handler(module_interrupt_registers_t regs)
     module_terminal_global_print_c_string(" !");
   }
   // Enable  interrupts so that other could be handled
-  module_interrupt_enable();
+  //module_interrupt_enable();
 }
 // -------------------------------------------------------------------------- //
 void module_interrupt_init()
@@ -335,6 +335,24 @@ void module_interrupt_enable()
 void module_interrupt_disable()
 {
   asm volatile ("cli");
+}
+// -------------------------------------------------------------------------- //
+void module_interrupt_enable_irq(const uint8_t irq)
+{
+  const uint8_t pic_master_data = 33; // 0x21
+  const uint8_t pic_slave_data = 161; // 0xA1
+
+  static uint16_t ocw1 = 0xFFFB;
+  ocw1 &= (uint16_t)~((1 << (irq-32)));
+
+  if ((irq-32) < 8)
+  {
+    module_kernel_out_8(pic_master_data, (uint8_t)(ocw1 & 0xFF));
+  }
+  else
+  {
+    module_kernel_out_8(pic_slave_data, (uint8_t)(ocw1 >> 8));
+  }
 }
 // -------------------------------------------------------------------------- //
 

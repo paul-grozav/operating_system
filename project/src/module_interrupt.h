@@ -61,6 +61,14 @@ void module_interrupt_enable();
 
 //! Disable interrupts. Do not allow the CPU to be interrupted.
 void module_interrupt_disable();
+
+/**
+ * Enable one specific IRQ by number. Call this after registering a handler, so
+ * that you get interrupted.
+ * @param[in] irq - The interrupt number. For example IRQ 32+1 is the keyboard
+ * interrupt.
+ */
+void module_interrupt_enable_irq(const uint8_t irq);
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //

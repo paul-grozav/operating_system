@@ -226,7 +226,7 @@ module_interrupt_irq_common:
 
   // Cleans up the pushed error code and pushed ISR number
   add $8, %esp
-  // sti ?
+  //sti // enable interrupts again ?
   // pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
   iret
 // -------------------------------------------------------------------------- //

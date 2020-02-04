@@ -49,6 +49,11 @@ typedef struct
 
   //! Black background, White foreground
   uint8_t color;
+
+  /** Shows the text cursor if value is 1 and does not show it if the value is
+   * 0.
+   */
+  uint8_t should_show_cursor;
 } module_terminal_vga;
 
 extern module_terminal_vga *module_terminal_vga_instance;
@@ -59,7 +64,7 @@ extern module_terminal_vga *module_terminal_vga_instance;
 module_terminal_vga module_terminal_vga_create();
 
 //! This function initiates the global terminal by clearing it.
-void module_terminal_global_init();
+void module_terminal_global_init(const uint8_t should_show_cursor);
 
 //! This function initiates the given terminal by clearing it.
 void module_terminal_init(module_terminal_vga *t);
@@ -93,6 +98,13 @@ void module_terminal_global_print_hex_uint64(const uint64_t i);
 
 //! Print unsigned 64 bit integer as hex(base 16) on the given screen.
 void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t);
+
+// --- Cursor ---
+//! Enable cursor in global terminal
+void module_terminal_global_enable_cursor();
+
+//! Disable cursor in global terminal
+void module_terminal_global_disable_cursor();
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //
