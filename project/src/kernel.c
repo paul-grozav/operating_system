@@ -31,12 +31,6 @@ void kernel_main()
   module_terminal_vga_instance = &terminal;
   // Initiate(clear) terminal
   module_terminal_global_init(1);
-
-//  for(size_t i=0; i<50; i++)
-//  {
-//    module_terminal_global_print_uint8(i);
-//    module_terminal_global_print_char('\n');
-//  }
 //  asm volatile ("hlt"); // halt cpu
 
   // Display some messages
@@ -64,17 +58,17 @@ void kernel_main()
   module_terminal_global_print_hex_uint64(
     (uint64_t)(uint32_t)(&kernel_main));
   module_terminal_global_print_char('\n');
-
+// -------------------------------------------------------------------------- //
   module_terminal_global_print_c_string("Running serial_test ...");
   module_serial_test();
   module_terminal_global_print_c_string(" Done.\n");
-
+// -------------------------------------------------------------------------- //
   module_terminal_global_print_c_string("Running interrupts_test ...");
   module_interrupt_disable();
   module_interrupt_init();
   module_interrupt_test();
   module_terminal_global_print_c_string(" Done.\n");
-
+// -------------------------------------------------------------------------- //
   // heap begin
   module_heap_heap_bm kheap;
   char *ptr;
@@ -96,16 +90,20 @@ void kernel_main()
   module_terminal_global_print_c_string("Heap free...\n");
   module_heap_free(&kheap, ptr);
   // heap end
-
+// -------------------------------------------------------------------------- //
   module_terminal_global_print_c_string("Enabling keyboard...\n");
   module_keyboard_enable();
   module_terminal_global_print_c_string("Enabling interrupts...\n");
   module_interrupt_enable();
 
-  //-----------------
-//  module_video_test(&kheap);
+// -------------------------------------------------------------------------- //
+  module_video_test(&kheap);
 
-  while(1); // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core 100
+// -------------------------------------------------------------------------- //
+  // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core to 100%
+  while(1)
+  {
+  }
 
   module_terminal_global_print_c_string("\n-------------\n");
   module_terminal_global_print_c_string("Kernel ended. B`bye!");
@@ -114,38 +112,13 @@ void kernel_main()
 // Junk follows
 // -------------------------------------------------------------------------- //
 /*
-//  pic();
-//  waitch();
-void waitch()
-{
-  int key;
-  while ( 1 )
-  {
-
-//    module_kernel_out_8(0x20, 0x20); // Send EOI
-//    unsigned char c = module_kernel_in_8( 0x60 );
-//    if((c & 128) == 128)
-//      module_terminal_global_print_c_string("RELEASE\n");
-//    else
-//      module_terminal_global_print_c_string("PRESS\n");
-
-    // wait for key
-    while ((module_kernel_in_8(0x64) & 1) == 0);
-    key = module_kernel_in_8( 0x60 ); // same as inb- use yours
-    module_terminal_global_print_uint64(key);
-    if ( key & 0x80 ) continue;
-    if ( key != 0 ) return;
-    else if ( key == 0 ) continue;
-  }
-}
-*/
-/*
 #define IRQ_BASE 0x20
 #define PIC_MASTER_CTRL 0x20
 #define PIC_MASTER_DATA 0x21
 #define PIC_SLAVE_DATA  0xA1
 #define PIC_SLAVE_CTRL 0xA0
 
+//  pic();
 void
 pic(void) {
 

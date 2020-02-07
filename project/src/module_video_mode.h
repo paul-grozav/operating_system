@@ -1,16 +1,12 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
-#ifndef MODULE_KEYBOARD_H
-#define MODULE_KEYBOARD_H
+#ifndef MODULE_VIDEO_MODE_H
+#define MODULE_VIDEO_MODE_H
 // -------------------------------------------------------------------------- //
-#include "module_interrupt.h"
-// -------------------------------------------------------------------------- //
-//! Register interrupt handler and enable keyboard interrupt
-void module_keyboard_enable();
-
-//! Wait and return when key is pressed
-void module_keyboard_wait_keypress();
+unsigned char module_video_mode_320x200x256[];
+unsigned char module_video_mode_720x480x16[];
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //
+

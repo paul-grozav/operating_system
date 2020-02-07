@@ -341,4 +341,27 @@ void module_keyboard_enable()
   module_interrupt_enable_irq(32+1);
 }
 // -------------------------------------------------------------------------- //
+void module_keyboard_wait_keypress()
+{
+  int key;
+  while ( 1 )
+  {
+
+//    module_kernel_out_8(0x20, 0x20); // Send EOI
+//    unsigned char c = module_kernel_in_8( 0x60 );
+//    if((c & 128) == 128)
+//      module_terminal_global_print_c_string("RELEASE\n");
+//    else
+//      module_terminal_global_print_c_string("PRESS\n");
+
+    // wait for key
+    while ((module_kernel_in_8(0x64) & 1) == 0);
+    key = module_kernel_in_8( 0x60 ); // same as inb- use yours
+    module_terminal_global_print_uint64(key);
+    if ( key & 0x80 ) continue;
+    if ( key != 0 ) return;
+    else if ( key == 0 ) continue;
+  }
+}
+// -------------------------------------------------------------------------- //
 
