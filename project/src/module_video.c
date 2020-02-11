@@ -195,7 +195,7 @@ static unsigned vga_get_fb(void)
 static void vmemwr(unsigned dst_off, unsigned char *src, unsigned count)
 {
   unsigned i = 0;
-  unsigned char *fb = vga_get_fb();
+  unsigned char *fb = (unsigned char*)vga_get_fb();
   for (i = 0; i < count; i++)
   {
     fb[dst_off+i] = src[i];

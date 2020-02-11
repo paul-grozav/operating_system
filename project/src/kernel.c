@@ -46,7 +46,8 @@ void kernel_main()
   module_terminal_global_print_uint8(i1);
   module_terminal_global_print_char('\n');
 
-  uint64_t i2 = 18446744073709551614;
+  // U suffix avoids warning: integer constant is so large that it is unsigned
+  uint64_t i2 = 18446744073709551614U;
   module_terminal_global_print_uint64(i2);
   module_terminal_global_print_char('\n');
 

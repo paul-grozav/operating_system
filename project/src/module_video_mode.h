@@ -4,8 +4,8 @@
 #ifndef MODULE_VIDEO_MODE_H
 #define MODULE_VIDEO_MODE_H
 // -------------------------------------------------------------------------- //
-unsigned char module_video_mode_320x200x256[];
-unsigned char module_video_mode_720x480x16[];
+unsigned char module_video_mode_320x200x256[61];
+unsigned char module_video_mode_720x480x16[61];
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //
