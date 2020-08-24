@@ -56,7 +56,7 @@ char module_keyboard_mapping[127] =
  ';', // 39
  '\'', // 40
  '`', // 41 - back tick, next to 1(one)
- ' ', // 42 - SHIFT
+ ' ', // 42 - SHIFT Left
  '\\', // 43
  'z', // 44
  'x', // 45
@@ -68,7 +68,7 @@ char module_keyboard_mapping[127] =
  ',', // 51
  '.', // 52
  '/', // 53
- '\0', // 54 - UNKNOWN KEY
+ ' ', // 54 - SHIFT Right
  ' ', // 55 - NUMPAD ASTERISK
  ' ', // 56 - ALT (LEFT and RIGHT)
  ' ', // 57 - SPACE - The actual space key on your keyboard
@@ -185,7 +185,7 @@ const uint8_t module_keyboard_mapping_key_L = 38;
 const uint8_t module_keyboard_mapping_key_SEMICOLON = 39;
 const uint8_t module_keyboard_mapping_key_APOSTROPHE = 40;
 const uint8_t module_keyboard_mapping_key_BACK_TICK = 41;
-const uint8_t module_keyboard_mapping_key_SHIFT = 42;
+const uint8_t module_keyboard_mapping_key_SHIFT_LEFT = 42;
 const uint8_t module_keyboard_mapping_key_BACKSLASH = 43;
 const uint8_t module_keyboard_mapping_key_Z = 44;
 const uint8_t module_keyboard_mapping_key_X = 45;
@@ -197,7 +197,7 @@ const uint8_t module_keyboard_mapping_key_M = 50;
 const uint8_t module_keyboard_mapping_key_COMMA = 51;
 const uint8_t module_keyboard_mapping_key_PERIOD = 52;
 const uint8_t module_keyboard_mapping_key_SLASH = 53;
-//const uint8_t module_keyboard_mapping_key_??? = 54;
+const uint8_t module_keyboard_mapping_key_SHIFT_RIGHT = 54;
 const uint8_t module_keyboard_mapping_key_NUMPAD_ASTERISK = 55;
 const uint8_t module_keyboard_mapping_key_ALT = 56;
 const uint8_t module_keyboard_mapping_key_SPACE = 57;
