@@ -11,6 +11,7 @@
 #include "module_heap.h"
 #include "module_video.h"
 #include "module_keyboard.h"
+//#include "module_network.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -99,6 +100,7 @@ void kernel_main()
 
 // -------------------------------------------------------------------------- //
   module_video_test(&kheap);
+//  module_network_test();
 
 // -------------------------------------------------------------------------- //
   // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core to 100%
