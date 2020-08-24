@@ -90,7 +90,7 @@ char module_keyboard_mapping[127] =
  ' ', // 73 - PAGE UP
  ' ', // 74 - NUMPAD MINUS sign
  ' ', // 75 - LEFT ARROW
- '\0', // 76 - UNKNOWN KEY
+ ' ', // 76 - NUMPAD key 5
  ' ', // 77 - RIGHT ARROW
  ' ', // 78 - NUMPAD PLUS sign
  ' ', // 79 - END
@@ -219,7 +219,7 @@ const uint8_t module_keyboard_mapping_key_ARROW_UP = 72;
 const uint8_t module_keyboard_mapping_key_PAGE_UP = 73;
 const uint8_t module_keyboard_mapping_key_NUMPAD_MINUS = 74;
 const uint8_t module_keyboard_mapping_key_ARROW_LEFT = 75;
-//const uint8_t module_keyboard_mapping_key_??? = 76;
+const uint8_t module_keyboard_mapping_key_NUMPAD_KEY_5 = 76;
 const uint8_t module_keyboard_mapping_key_ARROW_RIGHT = 77;
 const uint8_t module_keyboard_mapping_key_NUMPAD_PLUS = 78;
 const uint8_t module_keyboard_mapping_key_END = 79;
@@ -319,8 +319,10 @@ void module_keyboard_interrupt_handler(module_interrupt_registers_t x)
   const uint8_t c = module_keyboard_mapping[ScanCode];
   if( c == '\0' )
   {
-    module_terminal_global_print_c_string("unknown key");
+    module_terminal_global_print_char('\n');
+    module_terminal_global_print_c_string("unknown key: ");
     module_terminal_global_print_uint64(ScanCode);
+    module_terminal_global_print_char('\n');
   }
   else if( ScanCode == module_keyboard_mapping_key_ENTER )
   {
