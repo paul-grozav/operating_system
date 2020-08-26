@@ -54,6 +54,7 @@ echo "Compiling kernel ..." &&
 cd ${work_path}/project &&
 rm -rf build && mkdir -p build && cd build &&
 src_folder="${work_path}/project/src" &&
+# Compile
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/start.s -o start.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/kernel.c -o kernel.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_kernel.c -o module_kernel.o &&
@@ -67,8 +68,14 @@ ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/modu
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_video_mode.c -o module_video_mode.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_video_font.c -o module_video_font.o &&
 ${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_keyboard.c -o module_keyboard.o &&
-#${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_network.c -o module_network.o &&
-${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld start.o kernel.o module_kernel.o module_terminal.o module_serial.o module_base.o module_interrupt.o module_interrupt_asm.o module_heap.o module_video.o module_video_mode.o module_video_font.o module_keyboard.o -lgcc -o my_kernel.elf &&
+${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_network.c -o module_network.o &&
+# Link
+${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld \
+  start.o kernel.o module_kernel.o module_terminal.o module_serial.o \
+  module_base.o module_interrupt.o module_interrupt_asm.o module_heap.o \
+  module_video.o module_video_mode.o module_video_font.o module_keyboard.o \
+  module_network.o \
+  -lgcc -o my_kernel.elf &&
 echo "Compiled kernel!" &&
 
 # Make ISO

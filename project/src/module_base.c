@@ -109,3 +109,29 @@ size_t uint64_to_ascii_base16(uint64_t number, char * const output_buffer)
   return l;
 }
 // -------------------------------------------------------------------------- //
+size_t uint64_to_ascii_base2(uint64_t number, char * const output_buffer)
+{
+  if(number == 0)
+  {
+    output_buffer[0] = '0';
+    return 1;
+  }
+
+  size_t b2_digits = 0;
+  unsigned char b[64]; // max of unsigned long long int is 64 digits long
+
+  while(number != 0)
+  {
+    b[b2_digits] = (number % 2 == 0) ? '0' : '1';
+//    cout << b[b2_digits] << endl;
+    b2_digits = b2_digits + 1;
+    number = number / 2;
+  }
+
+  for(size_t i = 0; i < b2_digits; i++)
+  {
+    output_buffer[i] = b[b2_digits - i - 1];
+  }
+  return b2_digits;
+}
+// -------------------------------------------------------------------------- //
