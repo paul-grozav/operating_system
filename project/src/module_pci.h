@@ -29,6 +29,16 @@ typedef struct
   uint8_t is_multifunction_device;
 
   /**
+   * Bus number where the device is available - between 0-255.
+   */
+  uint8_t bus;
+
+  /**
+   * Slot number where the device is available - between 0-31.
+   */
+  uint8_t slot;
+
+  /**
    * Only has a value > 0 for multifunction devices. Single function devices
    * will have a function value of 0.
    */
@@ -100,6 +110,12 @@ typedef struct
    * written.
    */
   uint8_t cache_line_size;
+
+  /**
+   * Base Address Registers 0 at offset 0x10 - a 32 bits value that represents
+   * an address.
+   */
+  uint32_t bar_0;
 } module_pci_device_info;
 // -------------------------------------------------------------------------- //
 /**
@@ -112,27 +128,28 @@ void module_pci_device_info_init(module_pci_device_info * const di);
  * Read 32 bits from the PCI Configuration Space. See
  * https://wiki.osdev.org/PCI#Header_Type_0x00 .
  * @param[in] bus - One of the 256 buses available.
- * @param[in] device - One of the 32 devices available per bus.
+ * @param[in] slot - One of the 32 devices/slots available per bus.
  * @param[in] function - Function of that device, if it is a multi function
  * device.
  * @param[in] offset - offset from where to read the bits/bytes.
  */
-uint32_t pci_read(const uint8_t bus, const uint8_t device,
+uint32_t module_pci_config_read(const uint8_t bus, const uint8_t slot,
   const uint8_t function, const uint8_t offset);
 // -------------------------------------------------------------------------- //
 /**
  * Write 32 bits to the PCI Configuration Space. See
  * https://wiki.osdev.org/PCI#Header_Type_0x00 .
  * @param[in] bus - One of the 256 buses available.
- * @param[in] device - One of the 32 devices available per bus.
+ * @param[in] slot - One of the 32 devices/slots available per bus.
  * @param[in] function - Function of that device, if it is a multi function
  * device.
  * @param[in] offset - offset where to write the bits/bytes.
  * @param[in] data - 32 bits to be written.
  */
-void pci_write(const uint8_t bus, const uint8_t device,
+void module_pci_config_write(const uint8_t bus, const uint8_t slot,
   const uint8_t function, const uint8_t offset, const uint32_t data);
 // -------------------------------------------------------------------------- //
+//! List PCI devices
 void module_pci_test();
 // -------------------------------------------------------------------------- //
 #endif // header guard
