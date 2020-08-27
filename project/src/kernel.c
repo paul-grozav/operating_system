@@ -11,6 +11,7 @@
 #include "module_heap.h"
 #include "module_video.h"
 #include "module_keyboard.h"
+#include "module_pci.h"
 #include "module_network.h"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
@@ -54,6 +55,10 @@ void kernel_main()
 
   module_terminal_global_print_c_string("64222 as hex is ");
   module_terminal_global_print_hex_uint64(64222); // 0xfade
+  module_terminal_global_print_char('\n');
+
+  module_terminal_global_print_c_string("65535 as binary is ");
+  module_terminal_global_print_binary_uint64(65535); // 0xfade
   module_terminal_global_print_char('\n');
 
   module_terminal_global_print_c_string("kernel_main() at memory location: ");
@@ -100,6 +105,7 @@ void kernel_main()
 
 // -------------------------------------------------------------------------- //
 //  module_video_test(&kheap);
+  module_pci_test();
   module_network_test();
 
 // -------------------------------------------------------------------------- //

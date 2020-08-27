@@ -96,6 +96,13 @@ void module_terminal_print_uint64(const uint64_t i, module_terminal_vga *t);
 //! Print unsigned 64 bit integer as hex(base 16) on the global screen.
 void module_terminal_global_print_hex_uint64(const uint64_t i);
 
+//! Print unsigned 64 bit integer as binary(base 2) on the given screen.
+void module_terminal_print_binary_uint64(const uint64_t i,
+module_terminal_vga *t);
+
+//! Print unsigned 64 bit integer as binary(base 2) on the global screen.
+void module_terminal_global_print_binary_uint64(const uint64_t i);
+
 //! Print unsigned 64 bit integer as hex(base 16) on the given screen.
 void module_terminal_print_hex_uint64(const uint64_t i, module_terminal_vga *t);
 
