@@ -4,6 +4,7 @@
 #include <stdint.h> // uintX_t
 #include "module_keyboard.h"
 #include "module_kernel.h"
+#include "module_interrupt.h"
 #include "module_terminal.h"
 // -------------------------------------------------------------------------- //
 // the byte we get when pressing a key, contains 1 bit that tells us if the key

@@ -4,8 +4,6 @@
 #ifndef MODULE_KEYBOARD_H
 #define MODULE_KEYBOARD_H
 // -------------------------------------------------------------------------- //
-#include "module_interrupt.h"
-// -------------------------------------------------------------------------- //
 //! Register interrupt handler and enable keyboard interrupt
 void module_keyboard_enable();
 

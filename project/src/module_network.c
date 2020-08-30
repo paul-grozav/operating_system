@@ -6,9 +6,20 @@
 #include "module_terminal.h"
 #include "module_pci.h"
 #include "module_heap.h"
+#include "module_interrupt.h"
+// -------------------------------------------------------------------------- //
+uint16_t iobase = 99;
 // -------------------------------------------------------------------------- //
 void enable_bus_mastering(uint64_t addr)
 {
+}
+// -------------------------------------------------------------------------- //
+void module_network_interrupt_handler(module_interrupt_registers_t x)
+{
+  uint16_t interrupt_flag = module_kernel_in_16(iobase + 0x3e);
+  module_terminal_global_print_c_string("NIC IRQ flag=");
+  module_terminal_global_print_uint64(interrupt_flag);
+  module_terminal_global_print_c_string("\n");
 }
 // -------------------------------------------------------------------------- //
 void module_network_test()
@@ -30,12 +41,8 @@ void module_network_test()
   }
 
   // step 2 - get iobase
-  uint16_t iobase = 99;
   {
-    // BAR0 from PCI is a 32 bit address, we can't fit it into a 16 bit address
-    // We only use the first 16 bits, the last 16 bits are all 0.
     iobase = module_pci_config_read(bus, slot, function, 0x10) & ~1;
-//    iobase = (module_pci_config_read(bus, slot, function, 0x10) & ~1) >> 16;
   }
   module_terminal_global_print_c_string("NET IO base=");
   module_terminal_global_print_uint64(iobase);
@@ -110,6 +117,56 @@ void module_network_test()
     }
   }
   module_terminal_global_print_c_string(" .\n");
+
+  // step 8 - set IRQ handler
+  {
+    uint32_t irq = module_pci_config_read(bus, slot, function, 0x3C) &0xff;
+    module_terminal_global_print_c_string("Read IRQ=");
+    module_terminal_global_print_uint64(irq);
+    module_terminal_global_print_c_string("\n");
+
+    irq = 43; // this is actually triggered - instead of 11
+//    module_interrupt_register_interrupt_handler(irq,
+//      module_network_interrupt_handler);
+//    module_interrupt_enable_irq(irq);
+  }
+
+  // step 9 - send data over NIC
+  module_terminal_global_print_c_string("NIC sending data ...\n");
+  {
+/*
+    struct pkb
+    {
+      struct net_device *from;
+      void* queue;
+      int refcount;
+      uint8_t user_anno[32];
+      int length; // -1 if unknown
+      char buffer[];
+    };
+
+    struct __PACKED ethernet_header
+    {
+      struct mac_address destination_mac;
+      struct mac_address source_mac;
+      uint8_t ethertype;
+      char data[];
+    };
+*/
+    uint8_t slot = 0;
+    uint16_t tx_addr_off = 0x20 + (slot - 1) * 4;
+    uint16_t ctrl_reg_off = 0x10 + (slot - 1) * 4;
+
+    const char * send_data = "Bruce Lee";
+    module_kernel_out_32(iobase + tx_addr_off, (uint32_t)(send_data));
+    module_kernel_out_32(iobase + ctrl_reg_off, 9);
+
+    // await device taking packet
+    while (module_kernel_in_8(iobase + ctrl_reg_off) & 0x100);
+    // await send confirmation
+    while (module_kernel_in_8(iobase + ctrl_reg_off) & 0x400);
+  }
+  module_terminal_global_print_c_string("NIC data sent.\n");
 
   // free NIC buffer memory
   module_terminal_global_print_c_string("NIC RX buff free ...\n");

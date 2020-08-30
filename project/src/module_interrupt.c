@@ -307,7 +307,7 @@ void module_interrupt_irq_handler(module_interrupt_registers_t regs)
     module_terminal_global_print_c_string("irq_handler: No handler registered"
       " for interrupt: ");
     module_terminal_global_print_uint64(regs.int_no);
-    module_terminal_global_print_c_string(" !");
+    module_terminal_global_print_c_string(" !\n");
   }
   // Enable  interrupts so that other could be handled
   //module_interrupt_enable();
