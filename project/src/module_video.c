@@ -30,8 +30,8 @@
 #define VGA_NUM_CRTC_REGS     25
 #define VGA_NUM_GC_REGS        9
 #define VGA_NUM_AC_REGS       21
-//#define VGA_NUM_REGS          (1 + VGA_NUM_SEQ_REGS + VGA_NUM_CRTC_REGS + \
-  VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
+//#define VGA_NUM_REGS          (1 + VGA_NUM_SEQ_REGS + VGA_NUM_CRTC_REGS +
+//  VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
 // -------------------------------------------------------------------------- //
 uint32_t module_video_width, module_video_height, module_video_depth;
 uint8_t* module_video_fb;
@@ -128,7 +128,8 @@ void module_video_write_pixel8(const unsigned x, const unsigned y,
 void module_video_vga_line(const unsigned int x0, const unsigned int y0,
   const unsigned int x1, const unsigned int y1, const uint8_t c)
 {
-  int dx, dy, p, x, y;
+  unsigned int x = 0;
+  int dx, dy, p, y;
 
   dx = x1 - x0;
   dy = y1 - y0;
@@ -270,7 +271,8 @@ void module_video_test(module_heap_heap_bm *h)
     char *txt = "GRAphics\n";
     while(txt[i] != '\0')
     {
-      module_video_vga_putchar(20*(i+1), 20, fgcolor, bgcolor, txt[i++]);
+      module_video_vga_putchar(20*(i+1), 20, fgcolor, bgcolor, txt[i]);
+      i += 1;
     }
   }
 

@@ -13,6 +13,7 @@
 #include "module_keyboard.h"
 #include "module_pci.h"
 #include "module_network.h"
+//#include "test.hpp"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
 // cross-compiler correctly
@@ -23,6 +24,7 @@
 #endif
 // -------------------------------------------------------------------------- //
 // This is our kernel's main function
+// should be declared as extern "C" if written in C++ to be callable from ASM
 void kernel_main()
 {
   // We're here! Let's initiate the terminal and display a message to show we
@@ -121,6 +123,7 @@ void kernel_main()
 //  module_video_test(&kheap);
   module_pci_test();
   module_network_test();
+//  test_cpp();
 
 // -------------------------------------------------------------------------- //
   // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core to 100%
@@ -128,8 +131,8 @@ void kernel_main()
   {
   }
 
-  module_terminal_global_print_c_string("\n-------------\n");
-  module_terminal_global_print_c_string("Kernel ended. B`bye!");
+//  module_terminal_global_print_c_string("\n-------------\n");
+//  module_terminal_global_print_c_string("Kernel ended. B`bye!");
 }
 // -------------------------------------------------------------------------- //
 // Junk follows

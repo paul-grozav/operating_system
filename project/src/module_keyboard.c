@@ -275,15 +275,16 @@ const uint8_t module_keyboard_mapping_key_CONTEXT_MENU_KEY = 93;
 volatile uint8_t ScanCode;
 void module_keyboard_interrupt_handler(module_interrupt_registers_t x)
 {
+  (void)x; // avoid unused param
 //  module_terminal_global_print_c_string("IRQ1 handler\n");
   module_kernel_out_8(0x20, 0x20);// Send End-of-interrupt
   ScanCode = module_kernel_in_8(0x60);
   // MSB 1000000 tells us if it was a key up or down
   // the other bits describe the key
-  uint8_t was_pressed = 0;
+//  uint8_t was_pressed = 0;
   if((ScanCode & 128) != 128)
   {
-    was_pressed = 1;
+//    was_pressed = 1;
   }
   else
   {

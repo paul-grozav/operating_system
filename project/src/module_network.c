@@ -11,7 +11,7 @@
 // -------------------------------------------------------------------------- //
 uint16_t iobase = 99;
 module_heap_heap_bm nic_heap;
-char *rx_buffer = NULL;
+uint8_t *rx_buffer = NULL;
 size_t rx_index = 0;
 size_t rx_buff_size = 8192 + 16 + 1500; // 8*1024 + 16
 // -------------------------------------------------------------------------- //
@@ -79,7 +79,8 @@ struct __attribute__((__packed__)) mac_address
 {
   char data[6];
 };
-static const struct mac_address broadcast_mac = {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
+static const struct mac_address broadcast_mac =
+  {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 static const struct mac_address zero_mac = {{0, 0, 0, 0, 0, 0}};
 void print_mac(struct mac_address *ma)
 {
@@ -110,7 +111,7 @@ struct pkb
   int refcount;
   uint8_t user_anno[32];
   int length; // -1 if unknown
-  char buffer[];
+  uint8_t buffer[];
 };
 struct __attribute__((__packed__)) ethernet_header
 {
@@ -204,7 +205,7 @@ static inline uintptr_t round_up(uintptr_t val, uintptr_t place) {
 }
 // -------------------------------------------------------------------------- //
 static uint8_t rx_empty() {
-  return module_kernel_in_8(iobase + 0x37) & 1 != 0;
+  return (module_kernel_in_8(iobase + 0x37) & 1) != 0;
 }
 // -------------------------------------------------------------------------- //
 #define RX_OK 0x01
@@ -229,6 +230,7 @@ static uint8_t rx_empty() {
 #define RX_MULTICAST 0x8000
 void module_network_interrupt_handler(module_interrupt_registers_t x)
 {
+  (void)x; // avoid unused param
   uint16_t interrupt_flag = module_kernel_in_16(iobase + 0x3e);
   module_terminal_global_print_c_string("NIC IRQ flag=");
   module_terminal_global_print_uint64(interrupt_flag);
@@ -270,9 +272,10 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
       module_terminal_global_print_c_string("rx_index=");
       module_terminal_global_print_uint64(rx_index);
       module_terminal_global_print_c_string("\n");
-      uint16_t *header = (uint16_t *)(rx_buffer + rx_index);
-      uint32_t flags = header[0];
-      uint32_t length = header[1];
+      const uint16_t * const packet_header = (const uint16_t * const)(
+        rx_buffer + rx_index);
+      const uint32_t flags = packet_header[0];
+      const uint32_t length = packet_header[1];
       module_terminal_global_print_c_string("PP.flags=");
       module_terminal_global_print_uint64(flags);
       module_terminal_global_print_c_string("\n");
@@ -416,7 +419,7 @@ void module_network_test()
   {
     module_heap_init(&nic_heap);
     module_heap_add_block(&nic_heap, 0x110000, 1024*1024, 16);
-    rx_buffer = (char*)module_heap_alloc(&nic_heap, rx_buff_size);
+    rx_buffer = (uint8_t*)module_heap_alloc(&nic_heap, rx_buff_size);
     if(rx_buffer == 0)
     {
       module_terminal_global_print_c_string("NIC rx_buffer= NULL !!!");

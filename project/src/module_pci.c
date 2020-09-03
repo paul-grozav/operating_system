@@ -6,8 +6,8 @@
 //
 // Compile and run using:
 // ~>docker exec -it os bash /mnt/run.sh &&
-// qemu-system-i386 -cdrom ~/data/h313/network/docker/research/os/\
-// build_machine/fs/project/build/bootable.iso -boot d \
+// qemu-system-i386 -cdrom ~/data/h313/network/docker/research/os/
+// build_machine/fs/project/build/bootable.iso -boot d
 // -netdev user,id=mynet0 -device rtl8139,netdev=mynet0
 #include "module_pci.h"
 #include "module_kernel.h"
@@ -88,7 +88,7 @@ void module_pci_detect_devices()
   const uint16_t invalid_vendor_id = 0xffff;
   module_pci_device_info di;
   module_pci_device_info_init(&di);
-  for (uint8_t bus = 0; bus <= 255; bus++)
+  for (uint8_t bus = 0; ; bus++) // if 255 break at end
   {
     for (uint8_t slot = 0; slot < 32; slot++)
     {

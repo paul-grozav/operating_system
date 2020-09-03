@@ -55,21 +55,25 @@ cd ${work_path}/project &&
 rm -rf build && mkdir -p build && cd build &&
 src_folder="${work_path}/project/src" &&
 # Compile
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/start.s -o start.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/kernel.c -o kernel.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_kernel.c -o module_kernel.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_terminal.c -o module_terminal.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_serial.c -o module_serial.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_base.c -o module_base.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_interrupt.c -o module_interrupt.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_interrupt_asm.s -o module_interrupt_asm.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_heap.c -o module_heap.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_video.c -o module_video.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_video_mode.c -o module_video_mode.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_video_font.c -o module_video_font.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_keyboard.c -o module_keyboard.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_pci.c -o module_pci.o &&
-${target}-gcc -std=gnu99 -ffreestanding -g -I${src_folder} -c ${src_folder}/module_network.c -o module_network.o &&
+c_compiler_params="${target}-gcc -std=gnu99 -ffreestanding -g3 -O1 -Wall -Wextra -I${src_folder}" &&
+${c_compiler_params} -c ${src_folder}/start.s -o start.o &&
+${c_compiler_params} -c ${src_folder}/kernel.c -o kernel.o &&
+${c_compiler_params} -c ${src_folder}/module_kernel.c -o module_kernel.o &&
+${c_compiler_params} -c ${src_folder}/module_terminal.c -o module_terminal.o &&
+${c_compiler_params} -c ${src_folder}/module_serial.c -o module_serial.o &&
+${c_compiler_params} -c ${src_folder}/module_base.c -o module_base.o &&
+${c_compiler_params} -c ${src_folder}/module_interrupt.c -o module_interrupt.o &&
+${c_compiler_params} -c ${src_folder}/module_interrupt_asm.s -o module_interrupt_asm.o &&
+${c_compiler_params} -c ${src_folder}/module_heap.c -o module_heap.o &&
+${c_compiler_params} -c ${src_folder}/module_video.c -o module_video.o &&
+${c_compiler_params} -c ${src_folder}/module_video_mode.c -o module_video_mode.o &&
+${c_compiler_params} -c ${src_folder}/module_video_font.c -o module_video_font.o &&
+${c_compiler_params} -c ${src_folder}/module_keyboard.c -o module_keyboard.o &&
+${c_compiler_params} -c ${src_folder}/module_pci.c -o module_pci.o &&
+${c_compiler_params} -c ${src_folder}/module_network.c -o module_network.o &&
+# Compile C++
+#cpp_compiler_params="${target}-g++ -I${src_folder} -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti" &&
+#${cpp_compiler_params} -c ${src_folder}/test.cpp -o test.o &&
 # Link
 ${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld \
   start.o kernel.o module_kernel.o module_terminal.o module_serial.o \
