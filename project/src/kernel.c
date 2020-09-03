@@ -78,7 +78,8 @@ void kernel_main()
 // -------------------------------------------------------------------------- //
   // heap begin
   module_heap_heap_bm kheap;
-  char *ptr;
+  char *ptr1 = 0; // NULL
+  char *ptr2 = 0; // NULL
 
   // initialize the heap
   module_terminal_global_print_c_string("Initialize heap...\n");
@@ -87,15 +88,28 @@ void kernel_main()
   // add block to heap
   // starting 10MB mark and length of 1MB with default block size of 16 bytes
   module_terminal_global_print_c_string("Add heap block...\n");
-  module_heap_add_block(&kheap, 10*1024*1024, 1024*1024, 16);
+  module_heap_add_block(&kheap, 0x110000, (3*16)*16+20, 16);
 
-  // allocate 256 bytes (malloc)
+  // allocate 2 pointers (malloc)
   module_terminal_global_print_c_string("Heap alloc...\n");
-  ptr = (char*)module_heap_alloc(&kheap, 256);
+  ptr1 = (char*)module_heap_alloc(&kheap, 160);
+  module_terminal_global_print_c_string("Heap ptr1 = ");
+  module_terminal_global_print_hex_uint64((uint64_t)(uint32_t)(ptr1));
+  module_terminal_global_print_c_string("\n");
 
-  // free the pointer (free)
-  module_terminal_global_print_c_string("Heap free...\n");
-  module_heap_free(&kheap, ptr);
+  module_terminal_global_print_c_string("Heap alloc...\n");
+  ptr2 = (char*)module_heap_alloc(&kheap, 7);
+  module_terminal_global_print_c_string("Heap ptr2 = ");
+  module_terminal_global_print_hex_uint64((uint64_t)(uint32_t)(ptr2));
+  module_terminal_global_print_c_string("\n");
+
+  // free the pointer2 (free)
+  module_terminal_global_print_c_string("Heap free ptr1...\n");
+  module_heap_free(&kheap, ptr1);
+  ptr1 = 0; // NULL
+  module_terminal_global_print_c_string("Heap free ptr2...\n");
+  module_heap_free(&kheap, ptr2);
+  ptr2 = 0; // NULL
   // heap end
 // -------------------------------------------------------------------------- //
   module_terminal_global_print_c_string("Enabling keyboard...\n");
