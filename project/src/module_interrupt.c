@@ -290,11 +290,6 @@ void module_interrupt_irq_handler(module_interrupt_registers_t regs)
 //  module_terminal_global_print_uint64(regs.int_no);
 //  module_terminal_global_print_char('\n');
 
-  if (regs.int_no >= 40)
-  {
-    module_kernel_out_8(0xA0,0x20);
-  }
-  module_kernel_out_8(0x20,0x20);
 
   if (module_interrupt_interrupt_handlers[regs.int_no] != 0 )
   {
@@ -309,6 +304,14 @@ void module_interrupt_irq_handler(module_interrupt_registers_t regs)
     module_terminal_global_print_uint64(regs.int_no);
     module_terminal_global_print_c_string(" !\n");
   }
+
+  // This is part of EOI.
+  // we should do this AFTER calling the handler - not before
+  if (regs.int_no >= 40)
+  {
+    module_kernel_out_8(0xA0,0x20);
+  }
+  module_kernel_out_8(0x20,0x20);//EOI = End-Of-Interrupt
   // Enable  interrupts so that other could be handled
   //module_interrupt_enable();
 }
