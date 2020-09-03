@@ -11,7 +11,8 @@
 #include <stdint.h> // uintX_t
 // -------------------------------------------------------------------------- //
 /**
- * A heap block, containing a pointer to the next block
+ * A heap block, containing a pointer to the next block. This block has a size
+ * of "size" bytes and is split into blocks of size "bsize" bytes.
  */
 typedef struct module_heap_struct_heap_block_bm
 {
@@ -21,9 +22,21 @@ typedef struct module_heap_struct_heap_block_bm
   //! Size of this block
   uint32_t size;
 
-  //! How much memory is used, in this block
+  /**
+   * How many blocks are used, in this block. This means that out of all "size"
+   * bytes available in this block, "used" * "bsize" bytes are already used.
+   * Even if you allocate 1 byte, it would still use an entire block of "bsize"
+   * bytes to store your data.
+   */
   uint32_t used;
+
+  //! Number of bytes inside a block. The size of the block.
   uint32_t bsize;
+
+  /**
+   * This basically points to the space after the most recent allocation in
+   * hopes that during it allocation it will be closer to any free blocks.
+   */
   uint32_t lfb;
 } module_heap_heap_block_bm;
 // -------------------------------------------------------------------------- //
@@ -44,11 +57,22 @@ typedef struct module_heap_struct_heap_bm
 void module_heap_init(module_heap_heap_bm *heap);
 // -------------------------------------------------------------------------- //
 /**
- * Add a block to the given heap.
+ * Add a block to the given heap. This block will be split into sub-blocks of
+ * bsize bytes. This super-block will have ~approx. size/bsize sub-blocks.
+ *
+ * @note This block will be a structure at addr, then N bytes composing the
+ * bitmap which tells us which sub-block(chunk) is used, then the actual N
+ * sub-blocks of data, that are returned as pointers. That's why the size
+ * parameter must have a minimum value.
+ *
+ * @note Even if you allocate just 1 byte, it will allocate a chunk of
+ * "at least" bsize bytes (in this super-block).
+ *
  * @param[in, out] heap - heap to add the block to
  * @param[in] addr - Address where this block starts in memory
- * @param[in] size - size of block, in bytes
- * @param[in] bsize - default block size, in bytes
+ * @param[in] size - size of (super) block, in bytes. Should be a value like:
+ * N*(bsize + 1) + sizeof(block struct). 
+ * @param[in] bsize - default sub-block(chunk) size, in bytes
  * @note This block is appended to the current heap(linked list).
  */
 void module_heap_add_block(module_heap_heap_bm *heap, const uintptr_t addr,
