@@ -82,7 +82,7 @@ struct __attribute__((__packed__)) mac_address
 static const struct mac_address broadcast_mac =
   {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 static const struct mac_address zero_mac = {{0, 0, 0, 0, 0, 0}};
-void print_mac(struct mac_address *ma)
+void print_mac(const struct mac_address * const ma)
 {
   char buffer[20+1];
   size_t l = 0;
@@ -101,6 +101,17 @@ void print_mac(struct mac_address *ma)
     if(i<5)
     {
       module_terminal_global_print_c_string(":");
+    }
+  }
+}
+void print_ip(const uint32_t ip)
+{
+  for (uint8_t i=0; i<4; i++)
+  {
+    module_terminal_global_print_uint64( ((const uint8_t * const)(&ip)) [i] );
+    if(i < 3)
+    {
+      module_terminal_global_print_c_string(".");
     }
   }
 }
@@ -173,7 +184,7 @@ void send_data(struct mac_address ma)
   while (module_kernel_in_8(iobase + ctrl_reg_off) & 0x400);
 }
 // -------------------------------------------------------------------------- //
-void print_hex_bytes(uint8_t *base, size_t count)
+void print_hex_bytes(const uint8_t * const base, const size_t count)
 {
   char buffer[20+1];
   size_t l = 0;
@@ -206,6 +217,97 @@ static inline uintptr_t round_up(uintptr_t val, uintptr_t place) {
 // -------------------------------------------------------------------------- //
 static uint8_t rx_empty() {
   return (module_kernel_in_8(iobase + 0x37) & 1) != 0;
+}
+// -------------------------------------------------------------------------- //
+const struct ethernet_header * eth_hdr(const struct pkb * const pk)
+{
+  return (const struct ethernet_header * const)&(pk->buffer);
+}
+// -------------------------------------------------------------------------- //
+void print_eth_hdr(const struct ethernet_header * const h)
+{
+  module_terminal_global_print_c_string("ethernet_header");
+  module_terminal_global_print_c_string("{ \"source_mac\": \"");
+  print_mac(&(h->source_mac));
+  module_terminal_global_print_c_string("\", \"destination_mac\": \"");
+  print_mac(&(h->destination_mac));
+  module_terminal_global_print_c_string("\", \"type\": \"");
+  const uint16_t eth_type = ntohs(h->ethertype);
+  if(eth_type == ETH_ARP)
+  {
+    module_terminal_global_print_c_string("ARP");
+  } else if(eth_type == ETH_IP) {
+    module_terminal_global_print_c_string("IP");
+  } else {
+    module_terminal_global_print_c_string("UNKNOWN");
+  }
+  module_terminal_global_print_c_string("(");
+  module_terminal_global_print_uint64(eth_type);
+  module_terminal_global_print_c_string(")");
+  module_terminal_global_print_c_string("\" }");
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
+void print_arp_header(const struct arp_header * const h)
+{
+  module_terminal_global_print_c_string("arp_header");
+  module_terminal_global_print_c_string("{ \"sender_ip\": \"");
+  print_ip(h->sender_ip);
+  module_terminal_global_print_c_string("\", \"target_ip\": \"");
+  print_ip(h->target_ip);
+  module_terminal_global_print_c_string("\", \"nothing\": \"");
+/*
+  print_mac(&(h->destination_mac));
+  module_terminal_global_print_c_string("\", \"type\": \"");
+  const uint16_t eth_type = ntohs(h->ethertype);
+  if(eth_type == ETH_ARP)
+  {
+    module_terminal_global_print_c_string("ARP");
+  } else if(eth_type == ETH_IP) {
+    module_terminal_global_print_c_string("IP");
+  } else {
+    module_terminal_global_print_c_string("UNKNOWN");
+  }
+  module_terminal_global_print_c_string("(");
+  module_terminal_global_print_uint64(eth_type);
+  module_terminal_global_print_c_string(")");
+*/
+  module_terminal_global_print_c_string("\" }");
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
+const struct arp_header * arp_hdr(const struct pkb * const pk)
+{
+  return (const struct arp_header * const)(
+    pk->buffer + sizeof(struct ethernet_header)
+  );
+}
+// -------------------------------------------------------------------------- //
+void process_arp_packet(const struct pkb * const p)
+{
+  const struct arp_header * const arp = arp_hdr(p);
+  print_arp_header(arp);
+}
+// -------------------------------------------------------------------------- //
+void process_ethernet_packet(const struct pkb * const p)
+{
+  print_hex_bytes(p->buffer, p->length);//rx_buff_size);
+//  print_hex_bytes(rx_buffer, 64);//rx_buff_size);
+  const struct ethernet_header * const eth = eth_hdr(p);
+  print_eth_hdr(eth);
+  const uint16_t eth_type = ntohs(eth->ethertype);
+  if(eth_type == ETH_ARP)
+  {
+    process_arp_packet(p);
+  }
+  else if(eth_type == ETH_IP)
+  {
+//    module_terminal_global_print_c_string("Got IP packet.\n");
+  }
+  else
+  {
+//    module_terminal_global_print_c_string("Got UNKNOWN packet.\n");
+  }
 }
 // -------------------------------------------------------------------------- //
 #define RX_OK 0x01
@@ -269,19 +371,19 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
     module_terminal_global_print_c_string("This card interrupted, and there is"
       " a packet. Processing it ...\n");
     {
-      module_terminal_global_print_c_string("rx_index=");
-      module_terminal_global_print_uint64(rx_index);
-      module_terminal_global_print_c_string("\n");
+//      module_terminal_global_print_c_string("rx_index=");
+//      module_terminal_global_print_uint64(rx_index);
+//      module_terminal_global_print_c_string("\n");
       const uint16_t * const packet_header = (const uint16_t * const)(
         rx_buffer + rx_index);
       const uint32_t flags = packet_header[0];
       const uint32_t length = packet_header[1];
-      module_terminal_global_print_c_string("PP.flags=");
-      module_terminal_global_print_uint64(flags);
-      module_terminal_global_print_c_string("\n");
-      module_terminal_global_print_c_string("PP.length=");
-      module_terminal_global_print_uint64(length);
-      module_terminal_global_print_c_string("\n");
+//      module_terminal_global_print_c_string("PP.flags=");
+//      module_terminal_global_print_uint64(flags);
+//      module_terminal_global_print_c_string("\n");
+//      module_terminal_global_print_c_string("PP.length=");
+//      module_terminal_global_print_uint64(length);
+//      module_terminal_global_print_c_string("\n");
 
       if ((flags & (RX_BAD_SYMBOL | RX_RUNT | RX_TOO_LONG |
         RX_CRC_ERR | RX_BAD_ALIGN)) ||
@@ -294,8 +396,8 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
         return;
       }
 
-      print_hex_bytes(rx_buffer, 64);//rx_buff_size);
-      module_terminal_global_print_c_string("---\n");
+//      print_hex_bytes(rx_buffer, 64);//rx_buff_size);
+//      module_terminal_global_print_c_string("---\n");
       struct pkb *pk = NULL;
 //      uint32_t pk_buffer = (uint32_t)(rx_buffer) + rx_index + 4;
       if ((flags & 1) == 0)
@@ -312,25 +414,7 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
         pk->length = length - 8;
         module_kernel_memcpy(rx_buffer + rx_index + 4, pk->buffer, pk->length);
       }
-      print_hex_bytes(pk->buffer, pk->length);//rx_buff_size);
-//      print_hex_bytes(rx_buffer, 64);//rx_buff_size);
-      struct ethernet_header *eth = (struct ethernet_header *)(&pk->buffer);
-      module_terminal_global_print_c_string("Got packet with dest MAC=");
-      print_mac(&(eth->destination_mac));
-      module_terminal_global_print_c_string("\n");
-      module_terminal_global_print_c_string("Got packet with source MAC=");
-      print_mac(&(eth->source_mac));
-      module_terminal_global_print_c_string("\n");
-      uint16_t eth_type = ntohs(eth->ethertype);
-      if(eth_type == ETH_ARP)
-      {
-        module_terminal_global_print_c_string("Got ARP packet.\n");
-      } else if(eth_type == ETH_IP) {
-        module_terminal_global_print_c_string("Got IP packet.\n");
-      } else {
-        module_terminal_global_print_c_string("Got UNKNOWN packet.\n");
-      }
-
+      process_ethernet_packet(pk);
       // end
       module_heap_free(&nic_heap, pk);
       rx_index += round_up(length + 4, 4);
@@ -434,8 +518,6 @@ void module_network_test()
   }
   module_terminal_global_print_c_string("NIC rx_buffer=");
   module_terminal_global_print_uint64((uint64_t)((uint32_t)((uint8_t*)(rx_buffer))));
-//  module_terminal_global_print_c_string(" = ");
-//  module_terminal_global_print_hex_uint64((uint32_t)(rx_buffer));
   module_terminal_global_print_c_string("\n");
   module_terminal_global_print_c_string("NIC RX buff initialized.\n");
 
