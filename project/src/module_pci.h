@@ -7,7 +7,7 @@
 #include <stdint.h> // uintX
 // -------------------------------------------------------------------------- //
 //! All fields that describe a PCI device.
-typedef struct
+typedef struct module_pci_struct_device_info
 {
   /**
    * Identifies the manufacturer of the device. Where valid IDs are allocated by
@@ -116,7 +116,20 @@ typedef struct
    * an address.
    */
   uint32_t bar_0;
+
+  struct module_pci_struct_device_info * next_device;
 } module_pci_device_info;
+// -------------------------------------------------------------------------- //
+/**
+ * Print details about a device.
+ * @param[in] di - Pointer to device info structure.
+ */
+void module_pci_print_device_info(const module_pci_device_info * const di);
+// -------------------------------------------------------------------------- //
+/**
+ * First node in a linked list of PCI device infos.
+ */
+extern module_pci_device_info * module_pci_devices;
 // -------------------------------------------------------------------------- //
 /**
  * Initialize with 0 or invalid values all the fields of the given structure.
@@ -148,6 +161,12 @@ uint32_t module_pci_config_read(const uint8_t bus, const uint8_t slot,
  */
 void module_pci_config_write(const uint8_t bus, const uint8_t slot,
   const uint8_t function, const uint8_t offset, const uint32_t data);
+// -------------------------------------------------------------------------- //
+//! Populate global linked list of PCI devices
+void module_pci_detect_devices();
+// -------------------------------------------------------------------------- //
+//! Free pointers from global linked list of PCI devices
+void module_pci_free_devices();
 // -------------------------------------------------------------------------- //
 //! List PCI devices
 void module_pci_test();

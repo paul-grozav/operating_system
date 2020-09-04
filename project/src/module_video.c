@@ -232,15 +232,15 @@ void module_video_vga_putchar(const uint32_t x, const uint32_t y,
   }
 }
 // -------------------------------------------------------------------------- //
-void module_video_test(module_heap_heap_bm *h)
+void module_video_test()
 {
   module_video_write_regs(module_video_mode_320x200x256);
 //  module_video_write_regs(g_640x480x16);
 //  module_video_write_regs(module_video_mode_720x480x16);
 //  vga_write_pixel = module_video_write_pixel8;// 4-bit = 16 colors
   // module_video_fb = (uint8_t*)module_video_vga_get_fb();
-  module_video_fb = (uint8_t*)module_heap_alloc(h,
-    module_video_width * module_video_height * ( module_video_depth >> 3 ));
+  module_video_fb = (uint8_t*)malloc(module_video_width * module_video_height *
+    ( module_video_depth >> 3 ));
 
   module_video_width = 320;
   module_video_height = 200;
@@ -281,13 +281,16 @@ void module_video_test(module_heap_heap_bm *h)
 
   // wait keypress and return to text mode
 //  module_keyboard_wait_keypress();
-//  module_video_write_regs(g_80x25_text); // not working as it should
+//  module_video_write_regs(
+//    module_video_mode_80x25_text); // not working as it should
 //  module_terminal_global_print_c_string("Back to text mode!\n");
 
 //  uint16_t y;
 //  for(y=0;y<200;y++)
 //    drawline(0,y,module_video_width,y,y & 0xFF);
 //  module_video_drawrect_fill(0,0,module_video_width,10,20);
+  free(module_video_fb);
+  module_video_fb = NULL;
 }
 // -------------------------------------------------------------------------- //
 // ----------------------- MIGHT BE USEFUL LATER ---------------------------- //

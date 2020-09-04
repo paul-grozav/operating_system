@@ -8,6 +8,7 @@
 #ifndef MODULE_HEAP_H
 #define MODULE_HEAP_H
 
+#include <stddef.h> // size_t
 #include <stdint.h> // uintX_t
 // -------------------------------------------------------------------------- //
 /**
@@ -85,7 +86,7 @@ void module_heap_add_block(module_heap_heap_bm *heap, const uintptr_t addr,
  * @return the address of the first byte of memory allocated for you. Or zero
  * (a.k.a. NULL) if no memory found.
  */
-void *module_heap_alloc(module_heap_heap_bm *heap, const uint32_t size);
+void * module_heap_alloc(module_heap_heap_bm *heap, const size_t size);
 // -------------------------------------------------------------------------- //
 /**
  * Free memory in the heap.
@@ -93,6 +94,42 @@ void *module_heap_alloc(module_heap_heap_bm *heap, const uint32_t size);
  * @param[in] ptr - pointer to free. constant pointer to constant "void/unknown"
  */
 void module_heap_free(module_heap_heap_bm *heap, const void * const ptr);
+// -------------------------------------------------------------------------- //
+/**
+ * Test the heap code by creating and using an instance.
+ */
+void module_heap_test();
+// -------------------------------------------------------------------------- //
+// Global instance + heap management functions
+// -------------------------------------------------------------------------- //
+/**
+ * Kernel heap instance, available through all the system.
+ */
+extern module_heap_heap_bm module_heap_heap_instance;
+// -------------------------------------------------------------------------- //
+/**
+ * Initialize the kernel main heap instance.
+ */
+void module_heap_heap_instance_init();
+// -------------------------------------------------------------------------- //
+/**
+ * Allocates size bytes of memory and returns a pointer to the allocated memory.
+ * The memory is not initialized so you shoul assume it contains random bytes.
+ * If size is 0, then this function returns NULL = 0, a unique pointer value
+ * that can later be successfully passed to free().
+ * @param[in] size - The number of bytes to be allocated in a continuous manner.
+ * @return The address of memory where these bytes were allocated or NULL = 0 if
+ * the allocation failed.
+ */
+void * malloc(const size_t size);
+// -------------------------------------------------------------------------- //
+/**
+ * Frees the memory space pointed to by ptr, which must have been returned by a
+ * previous call to malloc(). if free(ptr) has already been called before,
+ * undefined behavior occurs. If ptr is NULL = 0, no operation is performed.
+ * @param[in] ptr - Pointer to memory space to be freed.
+ */
+void free(const void * const ptr);
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //

@@ -3,6 +3,7 @@
 // -------------------------------------------------------------------------- //
 #include <stdint.h> // uintX_t
 #include "module_heap.h"
+//#include "module_terminal.h"
 // -------------------------------------------------------------------------- //
 // Based on the work of:
 //    2014 Leonard Kevin McGuire Jr (www.kmcg3413.net) (kmcg3413@gmail.com)
@@ -66,8 +67,12 @@ static uint8_t module_heap_get_nid(uint8_t a, uint8_t b)
   return c;
 }
 // -------------------------------------------------------------------------- //
-void *module_heap_alloc(module_heap_heap_bm *heap, const uint32_t size)
+void * module_heap_alloc(module_heap_heap_bm *heap, const size_t size)
 {
+  if(size == 0)
+  {
+    return NULL;
+  }
   module_heap_heap_block_bm *b; // current iterating block
   uint8_t *bm; // pointer to first byte bitmap of current block
   uint32_t bcnt; // count of sub-blocks in current block
@@ -134,11 +139,15 @@ void *module_heap_alloc(module_heap_heap_bm *heap, const uint32_t size)
 //      module_terminal_global_print_c_string("blk has no room\n");
 //    }
   }
-  return 0; // so called NULL ptr
+  return NULL; // 0 - so called NULL ptr
 }
 // -------------------------------------------------------------------------- //
 void module_heap_free(module_heap_heap_bm *heap, const void * const ptr)
 {
+  if(ptr == NULL)
+  {
+    return;
+  }
   module_heap_heap_block_bm *b;
   uintptr_t ptroff;
   uint32_t bi, x;
@@ -173,5 +182,63 @@ void module_heap_free(module_heap_heap_bm *heap, const void * const ptr)
   }
   // this error needs to be raised or reported somehow
   return;
+}
+// -------------------------------------------------------------------------- //
+void module_heap_test()
+{
+  module_heap_heap_bm kheap;
+  char *ptr1 = NULL;
+  char *ptr2 = NULL;
+
+  // initialize the heap
+  module_heap_init(&kheap);
+
+  // add block to heap
+  // starting 10MB mark and length of 1MB with default block size of 16 bytes
+  module_heap_add_block(&kheap, 0x110000, (3*16)*16+20, 16);
+
+  // allocate 2 pointers (malloc)
+  ptr1 = (char*)module_heap_alloc(&kheap, 160);
+//  module_terminal_global_print_c_string("Heap ptr1 = ");
+//  module_terminal_global_print_hex_uint64((uint64_t)(uint32_t)(ptr1));
+//  module_terminal_global_print_c_string("\n");
+
+  ptr2 = (char*)module_heap_alloc(&kheap, 7);
+//  module_terminal_global_print_c_string("Heap ptr2 = ");
+//  module_terminal_global_print_hex_uint64((uint64_t)(uint32_t)(ptr2));
+//  module_terminal_global_print_c_string("\n");
+
+  // free the 2 pointers (free)
+  module_heap_free(&kheap, ptr1);
+  ptr1 = NULL;
+  module_heap_free(&kheap, ptr2);
+  ptr2 = NULL;
+}
+// -------------------------------------------------------------------------- //
+// Global instance + heap management functions
+// -------------------------------------------------------------------------- //
+module_heap_heap_bm module_heap_heap_instance;
+// -------------------------------------------------------------------------- //
+void module_heap_heap_instance_init()
+{
+  module_heap_init(&module_heap_heap_instance);
+  module_heap_add_block(&module_heap_heap_instance,
+    // This is the starting point of the heap for this kernel
+    0x110000,
+    // Size of heap in bytes ( all heap in 1 block )
+    (1024*1024)*16+20,
+    // Block split in sub-blocks(chunks) of this many bytes
+    16
+  );
+}
+// -------------------------------------------------------------------------- //
+void * malloc(const size_t size)
+{
+  return module_heap_alloc(&module_heap_heap_instance, size);
+}
+// -------------------------------------------------------------------------- //
+void free(const void * const ptr)
+{
+  module_heap_free(&module_heap_heap_instance, ptr);
 }
 // -------------------------------------------------------------------------- //

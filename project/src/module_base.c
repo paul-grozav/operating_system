@@ -5,7 +5,8 @@
 #include <stdint.h> // uintX
 #include "module_base.h"
 // -------------------------------------------------------------------------- //
-size_t uint64_to_ascii_base10(uint64_t number, char * const output_buffer)
+size_t module_base_uint64_to_ascii_base10(uint64_t number,
+  char * const output_buffer)
 {
   char * const b = output_buffer; // rename variable to make code more readable.
   unsigned char d = 0;
@@ -53,7 +54,8 @@ size_t uint64_to_ascii_base10(uint64_t number, char * const output_buffer)
   return l;
 }
 // -------------------------------------------------------------------------- //
-size_t uint64_to_ascii_base16(uint64_t number, char * const output_buffer)
+size_t module_base_uint64_to_ascii_base16(uint64_t number,
+  char * const output_buffer)
 {
   char * const b = output_buffer; // rename variable to make code more readable.
   unsigned char d = 0;
@@ -109,7 +111,8 @@ size_t uint64_to_ascii_base16(uint64_t number, char * const output_buffer)
   return l;
 }
 // -------------------------------------------------------------------------- //
-size_t uint64_to_ascii_base2(uint64_t number, char * const output_buffer)
+size_t module_base_uint64_to_ascii_base2(uint64_t number,
+  char * const output_buffer)
 {
   if(number == 0)
   {

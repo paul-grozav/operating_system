@@ -361,7 +361,7 @@ void module_keyboard_wait_keypress()
     // wait for key
     while ((module_kernel_in_8(0x64) & 1) == 0);
     key = module_kernel_in_8( 0x60 ); // same as inb- use yours
-    module_terminal_global_print_uint64(key);
+//    module_terminal_global_print_uint64(key);
     if ( key & 0x80 ) continue;
     if ( key != 0 ) return;
     else if ( key == 0 ) continue;

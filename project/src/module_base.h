@@ -17,7 +17,8 @@
  * @note A 20 characters buffer is enough to hold the maximum uint64 numeric
  * value.
  */
-size_t uint64_to_ascii_base10(uint64_t number, char * const output_buffer);
+size_t module_base_uint64_to_ascii_base10(uint64_t number,
+  char * const output_buffer);
 
 /**
  * Convert a uint64 to ascii base 16.
@@ -33,7 +34,8 @@ size_t uint64_to_ascii_base10(uint64_t number, char * const output_buffer);
  * @note A 20 characters buffer is enough to hold the maximum uint64 numeric
  * value.
  */
-size_t uint64_to_ascii_base16(uint64_t number, char * const output_buffer);
+size_t module_base_uint64_to_ascii_base16(uint64_t number,
+  char * const output_buffer);
 
 /**
  * Convert a uint64 to ascii base 2.
@@ -49,7 +51,8 @@ size_t uint64_to_ascii_base16(uint64_t number, char * const output_buffer);
  * @note A 64 characters buffer is enough to hold the maximum uint64 numeric
  * value.
  */
-size_t uint64_to_ascii_base2(const uint64_t number, char * const output_buffer);
+size_t module_base_uint64_to_ascii_base2(const uint64_t number,
+  char * const output_buffer);
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //

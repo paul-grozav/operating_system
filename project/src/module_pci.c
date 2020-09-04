@@ -11,14 +11,12 @@
 // -netdev user,id=mynet0 -device rtl8139,netdev=mynet0
 #include "module_pci.h"
 #include "module_kernel.h"
+#include "module_heap.h"
 #include "module_terminal.h"
 #include "module_base.h"
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
-//#define outportb(a,b) module_kernel_out_8(a,b)
-//#define inportb(a,b) module_kernel_in_8(a,b)
-
 //#define OFFSET_DEVICEID 0x02
 //#define OFFSET_VENDORID 0x00
 //#define MULTI_FUNCTION 0x80
@@ -81,6 +79,232 @@ void module_pci_device_info_init(module_pci_device_info * const di)
   di->header_type = 0;
   di->latency_timer = 0;
   di->cache_line_size = 0;
+  di->next_device = NULL;
+}
+// -------------------------------------------------------------------------- //
+module_pci_device_info * module_pci_devices = NULL;
+// -------------------------------------------------------------------------- //
+void module_pci_device_get_class_name(const uint8_t class,
+  const uint8_t subclass, char ** class_name, char ** subclass_name)
+{
+  // Based on: https://wiki.osdev.org/PCI#Class_Codes
+  *subclass_name = "UNKNOWN"; // not all implemented
+  if(class == 0x00)
+  {
+    *class_name = "Unclassified";
+  }
+  else if(class == 0x01)
+  {
+    *class_name = "Mass Storage Controller";
+  }
+  else if(class == 0x02)
+  {
+    *class_name = "Network Controller";
+    if(subclass == 0x00)
+    {
+      *subclass_name = "Ethernet Controller";
+    }
+    else
+    {
+      *subclass_name = "UNKNOWN";
+    }
+  }
+  else if(class == 0x03)
+  {
+    *class_name = "Display Controller";
+    if(subclass == 0x00)
+    {
+      *subclass_name = "VGA Compatible Controller";
+    }
+    else
+    {
+      *subclass_name = "UNKNOWN";
+    }
+  }
+  else if(class == 0x04)
+  {
+    *class_name = "Multimedia Controller";
+  }
+  else if(class == 0x05)
+  {
+    *class_name = "Memory Controller";
+  }
+  else if(class == 0x06)
+  {
+    *class_name = "Bridge Device";
+    if(subclass == 0x00)
+    {
+      *subclass_name = "Host Bridge";
+    }
+    else if(subclass == 0x01)
+    {
+      *subclass_name = "ISA Bridge";
+    }
+    else
+    {
+      *subclass_name = "UNKNOWN";
+    }
+  }
+  else if(class == 0x07)
+  {
+    *class_name = "Simple Communication Controller";
+  }
+  else if(class == 0x08)
+  {
+    *class_name = "Base System Peripheral";
+  }
+  else if(class == 0x09)
+  {
+    *class_name = "Input Device Controller";
+  }
+  else if(class == 0x0a)
+  {
+    *class_name = "Docking Station";
+  }
+  else if(class == 0x0b)
+  {
+    *class_name = "Processor";
+  }
+  else if(class == 0x0c)
+  {
+    *class_name = "Serial Bus Controller";
+  }
+  else if(class == 0x0d)
+  {
+    *class_name = "Wireless Controller";
+  }
+  else if(class == 0x0e)
+  {
+    *class_name = "Intelligent Controller";
+  }
+  else if(class == 0x0f)
+  {
+    *class_name = "Intelligent Controller";
+  }
+  else if(class == 0x10)
+  {
+    *class_name = "Encryption Controller";
+  }
+  else if(class == 0x11)
+  {
+    *class_name = "Signal Processing Controller";
+  }
+  else if(class == 0x12)
+  {
+    *class_name = "Processing Accelerator";
+  }
+  else if(class == 0x13)
+  {
+    *class_name = "Non-Essential Instrumentation";
+  }
+  else if(class >= 0x14 && class <= 0x3f)
+  {
+    *class_name = "(Reserved range 1)";
+  }
+  else if(class == 0x40)
+  {
+    *class_name = "Co-Processor";
+  }
+  else if(class >= 0x41 && class <= 0xfe)
+  {
+    *class_name = "(Reserved range 2)";
+  }
+  else if(class == 0xff)
+  {
+    *class_name = "Unassigned Class (Vendor specific)";
+  }
+  else
+  {
+    *class_name = "UNKNOWN";
+  }
+}
+// -------------------------------------------------------------------------- //
+void module_pci_print_device_info(const module_pci_device_info * const di)
+{
+  if(di == NULL)
+  {
+    module_terminal_global_print_c_string("NULL PCI device.\n\n");
+    return;
+  }
+  char * class_name = NULL;
+  char * subclass_name = NULL;
+  module_pci_device_get_class_name(di->class_code, di->subclass_code,
+    &class_name, &subclass_name);
+
+  module_terminal_global_print_c_string("PCI device list_ptr=");
+  module_terminal_global_print_hex_uint64((uint32_t)(di));
+  module_terminal_global_print_c_string(" has the following info:");
+  module_terminal_global_print_c_string("   bus=");
+  module_terminal_global_print_uint8(di->bus);
+  module_terminal_global_print_c_string("   slot=");
+  module_terminal_global_print_uint64(di->slot);
+  module_terminal_global_print_c_string("   vendor=");
+  module_terminal_global_print_hex_uint64(di->vendor_id);
+  module_terminal_global_print_c_string("   device=");
+  module_terminal_global_print_hex_uint64(di->device_id);
+  module_terminal_global_print_c_string("   class=");
+  module_terminal_global_print_hex_uint64(di->class_code);
+  module_terminal_global_print_c_string("(\"");
+  module_terminal_global_print_c_string(class_name);
+  module_terminal_global_print_c_string("\")");
+  module_terminal_global_print_c_string("   subclass=");
+  module_terminal_global_print_hex_uint64(di->subclass_code);
+  module_terminal_global_print_c_string("(\"");
+  module_terminal_global_print_c_string(subclass_name);
+  module_terminal_global_print_c_string("\")");
+  module_terminal_global_print_c_string("   is_multi_function=");
+  module_terminal_global_print_uint8(di->is_multifunction_device);
+  module_terminal_global_print_c_string("   function=");
+  module_terminal_global_print_uint8(di->function);
+  module_terminal_global_print_c_string("   command=");
+  module_terminal_global_print_binary_uint64(di->command);
+  module_terminal_global_print_c_string("   status=");
+  module_terminal_global_print_uint64(di->status);
+  module_terminal_global_print_c_string("   prog_if=");
+  module_terminal_global_print_uint8(di->prog_if);
+  module_terminal_global_print_c_string("   revision_id=");
+  module_terminal_global_print_uint8(di->revision_id);
+  module_terminal_global_print_c_string("   latency_timer=");
+  module_terminal_global_print_uint8(di->latency_timer);
+  module_terminal_global_print_c_string("   cache_line_size=");
+  module_terminal_global_print_uint8(di->cache_line_size);
+  module_terminal_global_print_c_string("   header_type=");
+  module_terminal_global_print_binary_uint64(di->header_type);
+  module_terminal_global_print_c_string("   BIST=");
+  module_terminal_global_print_binary_uint64(di->bist);
+  module_terminal_global_print_c_string("   BAR0=");
+  module_terminal_global_print_hex_uint64(di->bar_0);
+  module_terminal_global_print_c_string("   next_device=");
+  module_terminal_global_print_hex_uint64((uint32_t)(di->next_device));
+  module_terminal_global_print_c_string(" .\n\n");
+}
+// -------------------------------------------------------------------------- //
+// add copy to list
+void module_pci_add_device_copy_to_list(const module_pci_device_info * const di)
+{
+  // create copy on heap
+  module_pci_device_info * di_node = (module_pci_device_info *)malloc(
+    sizeof(module_pci_device_info));
+  *di_node = *di;
+  module_terminal_global_print_c_string("Adding PCI device ptr=");
+  module_terminal_global_print_hex_uint64((uint32_t)(di_node));
+  module_terminal_global_print_c_string(" to list.\n");
+
+  // add copy to list
+  if(module_pci_devices == NULL)
+  {
+    module_pci_devices = di_node;
+  }
+  else
+  {
+    // iterate to end of list
+    module_pci_device_info * di_iterator = module_pci_devices;
+    while(di_iterator->next_device != NULL)
+    {
+      di_iterator = di_iterator->next_device;
+    }
+    di_iterator->next_device = di_node;
+  }
 }
 // -------------------------------------------------------------------------- //
 void module_pci_detect_devices()
@@ -131,42 +355,7 @@ void module_pci_detect_devices()
 
           di.bar_0 = module_pci_config_read(bus, slot, 0, 0x10);
 
-          module_terminal_global_print_c_string("Detected PCI device:");
-          module_terminal_global_print_c_string("   bus=");
-          module_terminal_global_print_uint8(di.bus);
-          module_terminal_global_print_c_string("   slot=");
-          module_terminal_global_print_uint64(di.slot);
-          module_terminal_global_print_c_string("   vendor=");
-          module_terminal_global_print_hex_uint64(di.vendor_id);
-          module_terminal_global_print_c_string("   device=");
-          module_terminal_global_print_hex_uint64(di.device_id);
-          module_terminal_global_print_c_string("   class=");
-          module_terminal_global_print_hex_uint64(di.class_code);
-          module_terminal_global_print_c_string("   subclass=");
-          module_terminal_global_print_hex_uint64(di.subclass_code);
-          module_terminal_global_print_c_string("   is_multi_function=");
-          module_terminal_global_print_uint8(di.is_multifunction_device);
-          module_terminal_global_print_c_string("   function=");
-          module_terminal_global_print_uint8(di.function);
-          module_terminal_global_print_c_string("   command=");
-          module_terminal_global_print_binary_uint64(di.command);
-          module_terminal_global_print_c_string("   status=");
-          module_terminal_global_print_uint64(di.status);
-          module_terminal_global_print_c_string("   prog_if=");
-          module_terminal_global_print_uint8(di.prog_if);
-          module_terminal_global_print_c_string("   revision_id=");
-          module_terminal_global_print_uint8(di.revision_id);
-          module_terminal_global_print_c_string("   latency_timer=");
-          module_terminal_global_print_uint8(di.latency_timer);
-          module_terminal_global_print_c_string("   cache_line_size=");
-          module_terminal_global_print_uint8(di.cache_line_size);
-          module_terminal_global_print_c_string("   header_type=");
-          module_terminal_global_print_binary_uint64(di.header_type);
-          module_terminal_global_print_c_string("   BIST=");
-          module_terminal_global_print_binary_uint64(di.bist);
-          module_terminal_global_print_c_string("   BAR0=");
-          module_terminal_global_print_hex_uint64(di.bar_0);
-          module_terminal_global_print_c_string(" .\n\n");
+          module_pci_add_device_copy_to_list(&di);
         }
       }
     }
@@ -179,9 +368,44 @@ void module_pci_detect_devices()
   }
 }
 // -------------------------------------------------------------------------- //
+void module_pci_free_devices()
+{
+  // iterate to end of list
+  const module_pci_device_info * i = module_pci_devices;
+  module_pci_devices = NULL;
+  const module_pci_device_info * next = NULL;
+  while(i != NULL)
+  {
+    next = i->next_device;
+    module_terminal_global_print_c_string("Freeing PCI device ptr=");
+    module_terminal_global_print_hex_uint64((uint32_t)(i));
+    module_terminal_global_print_c_string(" from list.\n");
+    free(i);
+    // Move to next device
+    i = next;
+  }
+}
+// -------------------------------------------------------------------------- //
 void module_pci_test()
 {
-  module_pci_detect_devices();
+  if(module_pci_devices == NULL)
+  {
+    module_terminal_global_print_c_string("PCI Device List is EMPTY ?!");
+    return;
+  }
+  // if here, then not empty ...
+
+  // iterate to end of list
+  const module_pci_device_info * i = module_pci_devices;
+  do
+  {
+    module_pci_print_device_info(i);
+    // Move to next device
+    i = i->next_device;
+  }
+  while(i->next_device != NULL);
+  // Print last device, that has next = NULL
+  module_pci_print_device_info(i);
 }
 // -------------------------------------------------------------------------- //
 

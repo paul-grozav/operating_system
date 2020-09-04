@@ -88,7 +88,7 @@ void print_mac(const struct mac_address * const ma)
   size_t l = 0;
   for (uint8_t i=0; i<6; i++)
   {
-    l = uint64_to_ascii_base16((uint8_t)(ma->data[i]), buffer);
+    l = module_base_uint64_to_ascii_base16((uint8_t)(ma->data[i]), buffer);
     if(l == 1)
     {
       buffer[2] = '\0';
@@ -190,7 +190,7 @@ void print_hex_bytes(const uint8_t * const base, const size_t count)
   size_t l = 0;
   for (size_t i=0; i<count; i++)
   {
-    l = uint64_to_ascii_base16(*(base + i), buffer);
+    l = module_base_uint64_to_ascii_base16(*(base + i), buffer);
     if(l == 1)
     {
       buffer[2] = '\0';

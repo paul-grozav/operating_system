@@ -78,61 +78,38 @@ void kernel_main()
   module_interrupt_test();
   module_terminal_global_print_c_string(" Done.\n");
 // -------------------------------------------------------------------------- //
-  // heap begin
-  module_heap_heap_bm kheap;
-  char *ptr1 = 0; // NULL
-  char *ptr2 = 0; // NULL
-
-  // initialize the heap
-  module_terminal_global_print_c_string("Initialize heap...\n");
-  module_heap_init(&kheap);
-
-  // add block to heap
-  // starting 10MB mark and length of 1MB with default block size of 16 bytes
-  module_terminal_global_print_c_string("Add heap block...\n");
-  module_heap_add_block(&kheap, 0x110000, (3*16)*16+20, 16);
-
-  // allocate 2 pointers (malloc)
-  module_terminal_global_print_c_string("Heap alloc...\n");
-  ptr1 = (char*)module_heap_alloc(&kheap, 160);
-  module_terminal_global_print_c_string("Heap ptr1 = ");
-  module_terminal_global_print_hex_uint64((uint64_t)(uint32_t)(ptr1));
-  module_terminal_global_print_c_string("\n");
-
-  module_terminal_global_print_c_string("Heap alloc...\n");
-  ptr2 = (char*)module_heap_alloc(&kheap, 7);
-  module_terminal_global_print_c_string("Heap ptr2 = ");
-  module_terminal_global_print_hex_uint64((uint64_t)(uint32_t)(ptr2));
-  module_terminal_global_print_c_string("\n");
-
-  // free the pointer2 (free)
-  module_terminal_global_print_c_string("Heap free ptr1...\n");
-  module_heap_free(&kheap, ptr1);
-  ptr1 = 0; // NULL
-  module_terminal_global_print_c_string("Heap free ptr2...\n");
-  module_heap_free(&kheap, ptr2);
-  ptr2 = 0; // NULL
-  // heap end
+  module_terminal_global_print_c_string("Running heap tests and init ...");
+  module_heap_test();
+  module_heap_heap_instance_init(); // init main kernel heap instance
+  module_terminal_global_print_c_string(" Done.\n");
 // -------------------------------------------------------------------------- //
   module_terminal_global_print_c_string("Enabling keyboard...\n");
   module_keyboard_enable();
   module_terminal_global_print_c_string("Enabling interrupts...\n");
   module_interrupt_enable();
-
 // -------------------------------------------------------------------------- //
-//  module_video_test(&kheap);
+//  module_video_test();
+  module_pci_detect_devices();
   module_pci_test();
-  module_network_test();
+//  module_network_test();
 //  test_cpp();
 
 // -------------------------------------------------------------------------- //
   // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core to 100%
-  while(1)
-  {
-  }
+//  while(1)
+//  {
+//  }
 
-//  module_terminal_global_print_c_string("\n-------------\n");
-//  module_terminal_global_print_c_string("Kernel ended. B`bye!");
+  module_terminal_global_print_c_string("Press any key to end the kernel...");
+  module_keyboard_wait_keypress();
+  module_terminal_global_print_c_string("\n");
+
+  module_terminal_global_print_c_string("Freeing PCI devices list ...\n");
+  module_pci_free_devices();
+  module_terminal_global_print_c_string("Done freeing PCI devices list.\n");
+
+  module_terminal_global_print_c_string("\n-------------\n");
+  module_terminal_global_print_c_string("Kernel ended. B`bye!");
 }
 // -------------------------------------------------------------------------- //
 // Junk follows
