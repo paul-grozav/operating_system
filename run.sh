@@ -70,7 +70,8 @@ ${c_compiler_params} -c ${src_folder}/module_video_mode.c -o module_video_mode.o
 ${c_compiler_params} -c ${src_folder}/module_video_font.c -o module_video_font.o &&
 ${c_compiler_params} -c ${src_folder}/module_keyboard.c -o module_keyboard.o &&
 ${c_compiler_params} -c ${src_folder}/module_pci.c -o module_pci.o &&
-${c_compiler_params} -c ${src_folder}/module_network.c -o module_network.o &&
+${c_compiler_params} -c ${src_folder}/module__driver__rtl8139.c -o module__driver__rtl8139.o &&
+${c_compiler_params} -c ${src_folder}/module__network.c -o module__network.o &&
 # Compile C++
 #cpp_compiler_params="${target}-g++ -I${src_folder} -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti" &&
 #${cpp_compiler_params} -c ${src_folder}/test.cpp -o test.o &&
@@ -79,7 +80,7 @@ ${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld \
   start.o kernel.o module_kernel.o module_terminal.o module_serial.o \
   module_base.o module_interrupt.o module_interrupt_asm.o module_heap.o \
   module_video.o module_video_mode.o module_video_font.o module_keyboard.o \
-  module_pci.o module_network.o \
+  module_pci.o module__network.o module__driver__rtl8139.o \
   -lgcc -o my_kernel.elf &&
 echo "Compiled kernel!" &&
 

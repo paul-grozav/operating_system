@@ -4,6 +4,9 @@
 #ifndef MODULE_BASE_H
 #define MODULE_BASE_H
 // -------------------------------------------------------------------------- //
+#include <stddef.h> // size_t
+#include <stdint.h> // uintX
+// -------------------------------------------------------------------------- //
 /**
  * Convert a uint64 to ascii base 10.
  * @param number - a copy of the number, this is altered as the function creates

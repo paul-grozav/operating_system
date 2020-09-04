@@ -1,8 +1,6 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
-#include <stddef.h> // size_t
-#include <stdint.h> // uintX
 #include "module_base.h"
 // -------------------------------------------------------------------------- //
 size_t module_base_uint64_to_ascii_base10(uint64_t number,

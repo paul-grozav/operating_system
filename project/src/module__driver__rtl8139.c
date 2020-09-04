@@ -1,13 +1,14 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
-#include "module_network.h"
 #include "module_kernel.h"
 #include "module_base.h"
 #include "module_terminal.h"
 #include "module_pci.h"
 #include "module_heap.h"
 #include "module_interrupt.h"
+#include "module__network.h"
+#include "module__driver__rtl8139.h"
 // -------------------------------------------------------------------------- //
 uint16_t iobase = 99;
 module_heap_heap_bm nic_heap;
@@ -15,42 +16,10 @@ uint8_t *rx_buffer = NULL;
 size_t rx_index = 0;
 size_t rx_buff_size = 8192 + 16 + 1500; // 8*1024 + 16
 // -------------------------------------------------------------------------- //
-// -----
-typedef uint32_t be32;
-typedef uint16_t be16;
-
-#define __const_htons(x) ((((x) & 0xFF00) >> 8) | (((x) & 0x00FF) << 8));
-#define __const_ntohs __const_htons
-
-static inline uint16_t ntohs(uint16_t x) {
-        return (((x & 0xFF00) >> 8) | ((x & 0x00FF) << 8));
-}
-
-static inline uint16_t htons(uint16_t x) {
-        return (((x & 0xFF00) >> 8) | ((x & 0x00FF) << 8));
-}
-
-static inline uint32_t ntohl(uint32_t x) {
-        return (
-                ((x & 0xFF000000) >> 24) |
-                ((x & 0x00FF0000) >> 8)  |
-                ((x & 0x0000FF00) << 8)  |
-                ((x & 0x000000FF) << 24)
-        );
-}
-
-static inline uint32_t htonl(uint32_t x) {
-        return (
-                ((x & 0xFF000000) >> 24) |
-                ((x & 0x00FF0000) >> 8)  |
-                ((x & 0x0000FF00) << 8)  |
-                ((x & 0x000000FF) << 24)
-        );
-}
-
 #define MASTER_DATA 0x21
 #define SLAVE_DATA 0xA1
-void pic_irq_unmask(int irq) {
+void pic_irq_unmask(int irq)
+{
         unsigned char mask;
 
         if (irq > 15 || irq < 0)
@@ -69,245 +38,20 @@ void pic_irq_unmask(int irq) {
                 module_kernel_out_8(MASTER_DATA, mask);
         }
 }
-
-enum ethertype {
-    ETH_IP = 0x0800,
-    ETH_ARP = 0x0806,
-};
-
-struct __attribute__((__packed__)) mac_address
-{
-  char data[6];
-};
-static const struct mac_address broadcast_mac =
-  {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
-static const struct mac_address zero_mac = {{0, 0, 0, 0, 0, 0}};
-void print_mac(const struct mac_address * const ma)
-{
-  char buffer[20+1];
-  size_t l = 0;
-  for (uint8_t i=0; i<6; i++)
-  {
-    l = module_base_uint64_to_ascii_base16((uint8_t)(ma->data[i]), buffer);
-    if(l == 1)
-    {
-      buffer[2] = '\0';
-      buffer[1] = buffer[0];
-      buffer[0] = '0';
-    } else {
-      buffer[l] = '\0';
-    }
-    module_terminal_global_print_c_string(buffer);
-    if(i<5)
-    {
-      module_terminal_global_print_c_string(":");
-    }
-  }
-}
-void print_ip(const uint32_t ip)
-{
-  for (uint8_t i=0; i<4; i++)
-  {
-    module_terminal_global_print_uint64( ((const uint8_t * const)(&ip)) [i] );
-    if(i < 3)
-    {
-      module_terminal_global_print_c_string(".");
-    }
-  }
-}
-struct pkb
-{
-  struct net_device *from;
-  void* queue;
-  int refcount;
-  uint8_t user_anno[32];
-  int length; // -1 if unknown
-  uint8_t buffer[];
-};
-struct __attribute__((__packed__)) ethernet_header
-{
-  struct mac_address destination_mac;
-  struct mac_address source_mac;
-  be16 ethertype;
-  char data[];
-};
-enum arp_op {
-    ARP_REQ = 1,
-    ARP_RESP = 2,
-};
-struct __attribute__((__packed__)) arp_header {
-    // eth_hdr
-    be16 hw_type;
-    be16 proto;
-    uint8_t hw_size;
-    uint8_t proto_size;
-    be16 op;
-    struct mac_address sender_mac;
-    be32 sender_ip;
-    struct mac_address target_mac;
-    be32 target_ip;
-};
-// ----
-void send_data(struct mac_address ma)
-{
-  uint8_t slot = 0;
-  uint16_t tx_addr_off = 0x20 + (slot - 1) * 4;
-  uint16_t ctrl_reg_off = 0x10 + (slot - 1) * 4;
-
-
-  size_t pk_size = sizeof(struct ethernet_header)
-    + sizeof(struct arp_header);
-  char send_data[pk_size];
-  struct ethernet_header *eh = (struct ethernet_header*)(send_data);
-  eh->source_mac = ma;
-  eh->destination_mac = broadcast_mac;
-  eh->ethertype = htons(ETH_ARP);
-
-  struct arp_header *r_arp = (struct arp_header*)(send_data
-    + sizeof(struct ethernet_header));
-  r_arp->hw_type = htons(1);      // eth_hdr
-  r_arp->proto = htons(0x0800);   // ip_hdr
-  r_arp->hw_size = 6;
-  r_arp->proto_size = 4;
-  r_arp->op = htons(ARP_REQ);
-  r_arp->sender_mac = ma;
-  r_arp->sender_ip = 0xc0a8c845;
-  r_arp->target_mac = zero_mac;
-  r_arp->target_ip = 0xc0a8c846;
-
-  module_kernel_out_32(iobase + tx_addr_off, (uint32_t)(send_data));
-  module_kernel_out_32(iobase + ctrl_reg_off, pk_size);
-
-  // await device taking packet
-  while (module_kernel_in_8(iobase + ctrl_reg_off) & 0x100);
-  // await send confirmation
-  while (module_kernel_in_8(iobase + ctrl_reg_off) & 0x400);
-}
 // -------------------------------------------------------------------------- //
-void print_hex_bytes(const uint8_t * const base, const size_t count)
+static inline uintptr_t round_down(uintptr_t val, uintptr_t place)
 {
-  char buffer[20+1];
-  size_t l = 0;
-  for (size_t i=0; i<count; i++)
-  {
-    l = module_base_uint64_to_ascii_base16(*(base + i), buffer);
-    if(l == 1)
-    {
-      buffer[2] = '\0';
-      buffer[1] = buffer[0];
-      buffer[0] = '0';
-    } else {
-      buffer[l] = '\0';
-    }
-    module_terminal_global_print_c_string(buffer);
-    if(i < count-1)
-    {
-      module_terminal_global_print_c_string(" ");
-    }
-  }
-  module_terminal_global_print_c_string("\n");
-}
-// -------------------------------------------------------------------------- //
-static inline uintptr_t round_down(uintptr_t val, uintptr_t place) {
   return val & ~(place - 1);
 }
-static inline uintptr_t round_up(uintptr_t val, uintptr_t place) {
+// -------------------------------------------------------------------------- //
+static inline uintptr_t round_up(uintptr_t val, uintptr_t place)
+{
   return round_down(val + place - 1, place);
 }
 // -------------------------------------------------------------------------- //
-static uint8_t rx_empty() {
+static uint8_t rx_empty()
+{
   return (module_kernel_in_8(iobase + 0x37) & 1) != 0;
-}
-// -------------------------------------------------------------------------- //
-const struct ethernet_header * eth_hdr(const struct pkb * const pk)
-{
-  return (const struct ethernet_header * const)&(pk->buffer);
-}
-// -------------------------------------------------------------------------- //
-void print_eth_hdr(const struct ethernet_header * const h)
-{
-  module_terminal_global_print_c_string("ethernet_header");
-  module_terminal_global_print_c_string("{ \"source_mac\": \"");
-  print_mac(&(h->source_mac));
-  module_terminal_global_print_c_string("\", \"destination_mac\": \"");
-  print_mac(&(h->destination_mac));
-  module_terminal_global_print_c_string("\", \"type\": \"");
-  const uint16_t eth_type = ntohs(h->ethertype);
-  if(eth_type == ETH_ARP)
-  {
-    module_terminal_global_print_c_string("ARP");
-  } else if(eth_type == ETH_IP) {
-    module_terminal_global_print_c_string("IP");
-  } else {
-    module_terminal_global_print_c_string("UNKNOWN");
-  }
-  module_terminal_global_print_c_string("(");
-  module_terminal_global_print_uint64(eth_type);
-  module_terminal_global_print_c_string(")");
-  module_terminal_global_print_c_string("\" }");
-  module_terminal_global_print_c_string("\n");
-}
-// -------------------------------------------------------------------------- //
-void print_arp_header(const struct arp_header * const h)
-{
-  module_terminal_global_print_c_string("arp_header");
-  module_terminal_global_print_c_string("{ \"sender_ip\": \"");
-  print_ip(h->sender_ip);
-  module_terminal_global_print_c_string("\", \"target_ip\": \"");
-  print_ip(h->target_ip);
-  module_terminal_global_print_c_string("\", \"nothing\": \"");
-/*
-  print_mac(&(h->destination_mac));
-  module_terminal_global_print_c_string("\", \"type\": \"");
-  const uint16_t eth_type = ntohs(h->ethertype);
-  if(eth_type == ETH_ARP)
-  {
-    module_terminal_global_print_c_string("ARP");
-  } else if(eth_type == ETH_IP) {
-    module_terminal_global_print_c_string("IP");
-  } else {
-    module_terminal_global_print_c_string("UNKNOWN");
-  }
-  module_terminal_global_print_c_string("(");
-  module_terminal_global_print_uint64(eth_type);
-  module_terminal_global_print_c_string(")");
-*/
-  module_terminal_global_print_c_string("\" }");
-  module_terminal_global_print_c_string("\n");
-}
-// -------------------------------------------------------------------------- //
-const struct arp_header * arp_hdr(const struct pkb * const pk)
-{
-  return (const struct arp_header * const)(
-    pk->buffer + sizeof(struct ethernet_header)
-  );
-}
-// -------------------------------------------------------------------------- //
-void process_arp_packet(const struct pkb * const p)
-{
-  const struct arp_header * const arp = arp_hdr(p);
-  print_arp_header(arp);
-}
-// -------------------------------------------------------------------------- //
-void process_ethernet_packet(const struct pkb * const p)
-{
-  print_hex_bytes(p->buffer, p->length);//rx_buff_size);
-//  print_hex_bytes(rx_buffer, 64);//rx_buff_size);
-  const struct ethernet_header * const eth = eth_hdr(p);
-  print_eth_hdr(eth);
-  const uint16_t eth_type = ntohs(eth->ethertype);
-  if(eth_type == ETH_ARP)
-  {
-    process_arp_packet(p);
-  }
-  else if(eth_type == ETH_IP)
-  {
-//    module_terminal_global_print_c_string("Got IP packet.\n");
-  }
-  else
-  {
-//    module_terminal_global_print_c_string("Got UNKNOWN packet.\n");
-  }
 }
 // -------------------------------------------------------------------------- //
 #define RX_OK 0x01
@@ -398,14 +142,14 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 
 //      print_hex_bytes(rx_buffer, 64);//rx_buff_size);
 //      module_terminal_global_print_c_string("---\n");
-      struct pkb *pk = NULL;
+      module__network__packet * pk = NULL;
 //      uint32_t pk_buffer = (uint32_t)(rx_buffer) + rx_index + 4;
       if ((flags & 1) == 0)
       {
         module_terminal_global_print_c_string("Got a bad packet.\n");
       } else {
-        pk = (struct pkb*)module_heap_alloc(&nic_heap,
-          sizeof(struct pkb) + length);
+        pk = (module__network__packet*)module_heap_alloc(&nic_heap,
+          sizeof(module__network__packet) + length);
         if(pk == NULL)
         {
           module_terminal_global_print_c_string("NIC packet alloc is NULL!\n");
@@ -414,7 +158,7 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
         pk->length = length - 8;
         module_kernel_memcpy(rx_buffer + rx_index + 4, pk->buffer, pk->length);
       }
-      process_ethernet_packet(pk);
+      module__network__process_ethernet_packet(pk);
       // end
       module_heap_free(&nic_heap, pk);
       rx_index += round_up(length + 4, 4);
@@ -428,7 +172,7 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 //  module_interrupt_enable(); // needed?
 }
 // -------------------------------------------------------------------------- //
-void module_network_test()
+void module__driver__rtl8139__test()
 {
   module_terminal_global_print_c_string("===- Network test -===\n");
 
@@ -462,14 +206,14 @@ void module_network_test()
   // you can run setting a given MAC using:
   // ~>docker exec -it os bash /mnt/run.sh && qemu-system-i386 -cdrom ~/data/h313/network/docker/research/os/build_machine/fs/project/build/bootable.iso -boot d -netdev user,id=mynet0 -device rtl8139,netdev=mynet0,mac=00:01:02:13:14:fa
   module_terminal_global_print_c_string("MAC address = ");
-  struct mac_address ma;
+  module__network__mac_address ma;
   {
     for (uint8_t i=0; i<6; i++)
     {
       uint8_t mac_byte = module_kernel_in_8(iobase + i);
       ma.data[i] = mac_byte;
     }
-    print_mac(&ma);
+    module__network__print_mac(&ma);
   }
   module_terminal_global_print_c_string(" .\n");
 

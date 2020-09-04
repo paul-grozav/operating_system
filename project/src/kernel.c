@@ -12,7 +12,8 @@
 #include "module_video.h"
 #include "module_keyboard.h"
 #include "module_pci.h"
-#include "module_network.h"
+#include "module__network.h"
+#include "module__driver__rtl8139.h"
 //#include "test.hpp"
 // -------------------------------------------------------------------------- //
 // First, let's do some basic checks to make sure we are using our x86-elf
@@ -91,7 +92,7 @@ void kernel_main()
 //  module_video_test();
   module_pci_detect_devices();
   module_pci_test();
-//  module_network_test();
+  module__driver__rtl8139__test();
 //  test_cpp();
 
 // -------------------------------------------------------------------------- //
