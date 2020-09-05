@@ -51,17 +51,31 @@ typedef struct __attribute__((__packed__))
   uint16_t proto;
   uint8_t hw_size;
   uint8_t proto_size;
-  uint16_t op;
+
+  //! ARP operation-request or response
+  uint16_t operation_type;
+
+  //! The MAC address of the sender machine
   module__network__mac_address sender_mac;
+
+  //! The IP address of the sender machine
   uint32_t sender_ip;
+
+  //! The MAC address of the target machine
   module__network__mac_address target_mac;
+
+  //! The IP address of the target machine
   uint32_t target_ip;
 } module__network__arp_header;
 // -------------------------------------------------------------------------- //
-//enum arp_op {
-//    ARP_REQ = 1,
-//    ARP_RESP = 2,
-//};
+enum module__network__ethernet__arp_operation_type
+{
+  //! ARP request
+  network__ethernet__arp_operation_type__request = 1,
+
+  //! ARP response
+  network__ethernet__arp_operation_type__response = 2
+};
 // -------------------------------------------------------------------------- //
 //! Run short network test
 void module__network__test();
