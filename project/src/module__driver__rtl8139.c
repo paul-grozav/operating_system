@@ -58,6 +58,30 @@ static uint8_t rx_empty()
   return (module_kernel_in_8(iobase + 0x37) & 1) != 0;
 }
 // -------------------------------------------------------------------------- //
+void print_hex_bytes2(const uint8_t * const base, const size_t count)
+{
+  char buffer[20+1];
+  size_t l = 0;
+  for (size_t i=0; i<count; i++)
+  {
+    l = module_base_uint64_to_ascii_base16(*(base + i), buffer);
+    if(l == 1)
+    {
+      buffer[2] = '\0';
+      buffer[1] = buffer[0];
+      buffer[0] = '0';
+    } else {
+      buffer[l] = '\0';
+    }
+    module_terminal_global_print_c_string(buffer);
+    if(i < count-1)
+    {
+      module_terminal_global_print_c_string(" ");
+    }
+  }
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
 #define ETH_MTU 1536
 void module__driver__rtl8139__send_packet(
   const module__network__packet * const p)
@@ -202,14 +226,14 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 //      module_terminal_global_print_c_string("\n");
       const uint16_t * const packet_header = (const uint16_t * const)(
         rx_buffer + rx_index);
-      const uint32_t flags = packet_header[0];
-      const uint32_t length = packet_header[1];
+      const uint16_t flags = packet_header[0];
+      const uint16_t length = packet_header[1];
 //      module_terminal_global_print_c_string("PP.flags=");
 //      module_terminal_global_print_uint64(flags);
 //      module_terminal_global_print_c_string("\n");
-//      module_terminal_global_print_c_string("PP.length=");
-//      module_terminal_global_print_uint64(length);
-//      module_terminal_global_print_c_string("\n");
+      module_terminal_global_print_c_string("PP.length=");
+      module_terminal_global_print_uint64(length);
+      module_terminal_global_print_c_string("\n");
 
       if ((flags & (RX_BAD_SYMBOL | RX_RUNT | RX_TOO_LONG |
         RX_CRC_ERR | RX_BAD_ALIGN)) ||
@@ -222,8 +246,6 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
         return;
       }
 
-//      print_hex_bytes(rx_buffer, 64);//rx_buff_size);
-//      module_terminal_global_print_c_string("---\n");
       module__network__packet * pk = NULL;
 //      uint32_t pk_buffer = (uint32_t)(rx_buffer) + rx_index + 4;
       if ((flags & 1) == 0)
@@ -237,7 +259,11 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
           module_terminal_global_print_c_string("NIC packet alloc is NULL!\n");
         }
   //      pk->from = dev;
-        pk->length = length - 8;
+        pk->length = length - 4;
+//        module_terminal_global_print_c_string("---PACKET_BEGIN---\n");
+//        print_hex_bytes2(rx_buffer + rx_index + 4, length);
+//        module_terminal_global_print_c_string("---PACKET_END---\n");
+        // +4 to skip packet header read above ( 2*16bit ints = 4 bytes )
         module_kernel_memcpy(rx_buffer + rx_index + 4, pk->buffer, pk->length);
       }
       module__network__process_ethernet_packet(pk);

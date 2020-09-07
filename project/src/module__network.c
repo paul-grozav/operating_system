@@ -167,6 +167,14 @@ module__network__ip_header * ip_hdr(const module__network__packet * const p)
   );
 }
 // -------------------------------------------------------------------------- //
+module__network__ip__tcp_header * tcp_hdr(
+  const module__network__ip_header * const ip_header)
+{
+  return (module__network__ip__tcp_header *)(
+    ( (uint8_t *)(ip_header) ) + (ip_header->header_length * 4)
+  );
+}
+// -------------------------------------------------------------------------- //
 // ARP Packet
 // -------------------------------------------------------------------------- //
 void print_arp_header(const module__network__arp_header * const h)
@@ -273,6 +281,87 @@ void process_arp_packet(const module__network__packet * const p)
   }
 }
 // -------------------------------------------------------------------------- //
+// Transmission Control Protocol (TCP) Packet
+// -------------------------------------------------------------------------- //
+void print_ip_tcp_header(const module__network__ip__tcp_header * const h)
+{
+  module_terminal_global_print_c_string("tcp_header");
+  module_terminal_global_print_c_string("{ \"source_port\": \"");
+  module_terminal_global_print_uint64(h->source_port);
+  module_terminal_global_print_c_string("\", \"destination_port\": \"");
+  module_terminal_global_print_uint64(h->destination_port);
+  module_terminal_global_print_c_string("\", \"seq\": \"");
+  module_terminal_global_print_uint64(h->seq);
+  module_terminal_global_print_c_string("\", \"ack\": \"");
+  module_terminal_global_print_uint64(h->ack);
+  module_terminal_global_print_c_string("\", \"_reserved\": \"");
+  module_terminal_global_print_uint64(h->_reserved);
+  module_terminal_global_print_c_string("\", \"offset\": \"");
+  module_terminal_global_print_uint64(h->offset);
+
+  module_terminal_global_print_c_string("\", \"f_fin\": \"");
+  module_terminal_global_print_uint64(h->f_fin);
+  module_terminal_global_print_c_string("\", \"f_syn\": \"");
+  module_terminal_global_print_uint64(h->f_syn);
+  module_terminal_global_print_c_string("\", \"f_rst\": \"");
+  module_terminal_global_print_uint64(h->f_rst);
+  module_terminal_global_print_c_string("\", \"f_psh\": \"");
+  module_terminal_global_print_uint64(h->f_psh);
+  module_terminal_global_print_c_string("\", \"f_ack\": \"");
+  module_terminal_global_print_uint64(h->f_ack);
+  module_terminal_global_print_c_string("\", \"f_urg\": \"");
+  module_terminal_global_print_uint64(h->f_urg);
+
+  module_terminal_global_print_c_string("\", \"_reserved2\": \"");
+  module_terminal_global_print_uint64(h->_reserved2);
+  module_terminal_global_print_c_string("\", \"window\": \"");
+  module_terminal_global_print_uint64(h->window);
+  module_terminal_global_print_c_string("\", \"checksum\": \"");
+  module_terminal_global_print_uint64(h->checksum);
+  module_terminal_global_print_c_string("\", \"urg_ptr\": \"");
+  module_terminal_global_print_uint64(h->urg_ptr);
+  module_terminal_global_print_c_string("\" }");
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
+void process_ip_tcp_packet(const module__network__packet * const p)
+{
+  const module__network__ip_header * const ip = ip_hdr(p);
+  const module__network__ip__tcp_header * const tcp = tcp_hdr(ip);
+
+  print_hex_bytes(p->buffer, p->length);
+  print_ip_tcp_header(tcp);
+/*
+  if (ip->destination_ip != htonl(my_ip))
+  {
+    module_terminal_global_print_c_string("Got IP packet but not for my IP,"
+      " ignoring.");
+    return;
+  }
+
+  switch (ip->protocol)
+  {
+    case module__network__ethernet__ip__protocol_type__icmp:
+      module_terminal_global_print_c_string("Handling IP_ICMP packet.\n");
+//      echo_icmp(p);
+      break;
+    case module__network__ethernet__ip__protocol_type__tcp:
+      module_terminal_global_print_c_string("Handling IP_TCP packet.\n");
+      process_ip_tcp_packet(p);
+      break;
+    case module__network__ethernet__ip__protocol_type__udp:
+      module_terminal_global_print_c_string("Handling IP_UDP packet.\n");
+//      socket_dispatch_udp(p);
+      break;
+    default:
+      module_terminal_global_print_c_string("Unknown IP protocol: ");
+      module_terminal_global_print_uint64(ip->protocol);
+      module_terminal_global_print_c_string("\n");
+      break;
+  }
+*/
+}
+// -------------------------------------------------------------------------- //
 // Internet Protocol (IP) Packet
 // -------------------------------------------------------------------------- //
 void print_ip_header(const module__network__ip_header * const h)
@@ -330,6 +419,7 @@ void process_ip_packet(const module__network__packet * const p)
 {
   const module__network__ip_header * const ip = ip_hdr(p);
 
+  print_hex_bytes(p->buffer, p->length);
   print_ip_header(ip);
   if (ip->destination_ip != htonl(my_ip))
   {
@@ -337,17 +427,20 @@ void process_ip_packet(const module__network__packet * const p)
       " ignoring.");
     return;
   }
-/*
+
   switch (ip->protocol)
   {
-    case IPPROTO_ICMP:
-      echo_icmp(pk);
+    case module__network__ethernet__ip__protocol_type__icmp:
+      module_terminal_global_print_c_string("Handling IP_ICMP packet.\n");
+//      echo_icmp(p);
       break;
-    case IPPROTO_UDP:
-      socket_dispatch_udp(pk);
+    case module__network__ethernet__ip__protocol_type__tcp:
+      module_terminal_global_print_c_string("Handling IP_TCP packet.\n");
+      process_ip_tcp_packet(p);
       break;
-    case IPPROTO_TCP:
-      socket_dispatch_tcp(pk);
+    case module__network__ethernet__ip__protocol_type__udp:
+      module_terminal_global_print_c_string("Handling IP_UDP packet.\n");
+//      socket_dispatch_udp(p);
       break;
     default:
       module_terminal_global_print_c_string("Unknown IP protocol: ");
@@ -355,7 +448,6 @@ void process_ip_packet(const module__network__packet * const p)
       module_terminal_global_print_c_string("\n");
       break;
   }
-*/
 }
 // -------------------------------------------------------------------------- //
 // Ethernet Packet
@@ -402,7 +494,8 @@ void module__network__process_ethernet_packet(
   }
   else if(eth_type == module__network__ethernet_header_type__ip)
   {
-    module_terminal_global_print_c_string("Got IP packet.\n");
+//    module_terminal_global_print_c_string("Got IP packet.\n");
+    process_ip_packet(p);
   }
   else
   {

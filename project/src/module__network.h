@@ -248,6 +248,47 @@ enum module__network__ethernet__ip__protocol_type
   module__network__ethernet__ip__protocol_type__udp = 17
 };
 // -------------------------------------------------------------------------- //
+// Transmission Control Protocol (TCP) Packet
+// -------------------------------------------------------------------------- //
+/**
+ * This is present after the IP header, if it's an TCP packet.
+ * See: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#
+ * TCP_segment_structure
+ */
+enum module__network__ip__tcp_flags
+{
+  module__network__ip__tcp_flag__none = 0,
+  module__network__ip__tcp_flag__urg = 1 << 0,
+  module__network__ip__tcp_flag__ack = 1 << 1,
+  module__network__ip__tcp_flag__psh = 1 << 2,
+  module__network__ip__tcp_flag__rst = 1 << 3,
+  module__network__ip__tcp_flag__syn = 1 << 4,
+  module__network__ip__tcp_flag__fin = 1 << 5,
+};
+// -------------------------------------------------------------------------- //
+typedef struct __attribute__((__packed__))
+{
+  uint16_t source_port;
+  uint16_t destination_port;
+  uint32_t seq;
+  uint32_t ack;
+  uint16_t _reserved : 4;
+  uint16_t offset : 4;
+  uint16_t f_fin : 1;
+  uint16_t f_syn : 1;
+  uint16_t f_rst : 1;
+  uint16_t f_psh : 1;
+  uint16_t f_ack : 1;
+  uint16_t f_urg : 1;
+  uint16_t _reserved2 : 2;
+  uint16_t window;
+  uint16_t checksum;
+  uint16_t urg_ptr;
+
+  //! Data following the IP_TCP header
+  char data[];
+} module__network__ip__tcp_header;
+// -------------------------------------------------------------------------- //
 //! Run short network test
 void module__network__test();
 void module__network__print_mac(const module__network__mac_address * const ma);
