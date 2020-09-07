@@ -1,6 +1,15 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
+// See: https://wiki.osdev.org/Network_Stack
+//
+// Run with: docker exec -it os bash /mnt/run.sh && (qemu-system-i386 -m 400M
+// -cdrom ~/data/h313/network/docker/research/os/build_machine/fs/project/build
+// /bootable.iso -boot d -netdev user,id=mynet0,hostfwd=tcp::5556-:22 -device
+// rtl8139,netdev=mynet0,mac=00:01:02:13:14:fa
+// -object filter-dump,id=f1,netdev=mynet0,file=dump.dat & ) && sleep 3 &&
+// ( echo | telnet 127.0.0.1 5556 )
+// -------------------------------------------------------------------------- //
 #include "module__network.h"
 #include "module_kernel.h"
 #include "module_base.h"
@@ -8,12 +17,15 @@
 #include "module_pci.h"
 #include "module_heap.h"
 #include "module_interrupt.h"
+#include "module__driver__rtl8139.h" // recursive?
 // -------------------------------------------------------------------------- //
 //static const module__network__mac_address broadcast_mac =
 //  {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 //static const module__network__mac_address zero_mac = {{0, 0, 0, 0, 0, 0}};
 static const module__network__mac_address my_mac =
   {{0x00, 0x01, 0x02, 0x13, 0x14, 0xfa}};
+// https://www.browserling.com/tools/ip-to-dec
+const uint32_t my_ip = 167772687; // 10.0.2.15
 // -------------------------------------------------------------------------- //
 // Packet Utils functions
 // -------------------------------------------------------------------------- //
@@ -106,14 +118,21 @@ void module__network__print_mac(const module__network__mac_address * const ma)
 // -------------------------------------------------------------------------- //
 void module__network__print_ip(const uint32_t ip)
 {
-  for (uint8_t i=0; i<4; i++)
-  {
-    module_terminal_global_print_uint64( ((const uint8_t * const)(&ip)) [i] );
-    if(i < 3)
-    {
-      module_terminal_global_print_c_string(".");
-    }
-  }
+//  for (uint8_t i=0; i<4; i++)
+//  {
+//    module_terminal_global_print_uint64( ((const uint8_t * const)(&ip)) [i] );
+//    if(i < 3)
+//    {
+//      module_terminal_global_print_c_string(".");
+//    }
+//  }
+  module_terminal_global_print_uint64( (ip) & 0xff );
+  module_terminal_global_print_c_string(".");
+  module_terminal_global_print_uint64( (ip >> 8) & 0xff );
+  module_terminal_global_print_c_string(".");
+  module_terminal_global_print_uint64( (ip >> 16) & 0xff );
+  module_terminal_global_print_c_string(".");
+  module_terminal_global_print_uint64( (ip >> 24) & 0xff );
 }
 // -------------------------------------------------------------------------- //
 #define ETH_MTU 1536
@@ -141,7 +160,55 @@ module__network__arp_header * arp_hdr(const module__network__packet * const p)
   );
 }
 // -------------------------------------------------------------------------- //
+module__network__ip_header * ip_hdr(const module__network__packet * const p)
+{
+  return (module__network__ip_header *)(p->buffer +
+    sizeof(module__network__ethernet_header)
+  );
+}
+// -------------------------------------------------------------------------- //
 // ARP Packet
+// -------------------------------------------------------------------------- //
+void print_arp_header(const module__network__arp_header * const h)
+{
+  module_terminal_global_print_c_string("arp_header");
+  module_terminal_global_print_c_string("{ \"hw_type\": \"");
+  module_terminal_global_print_uint64(h->hw_type);
+  module_terminal_global_print_c_string("\", \"proto\": \"");
+  module_terminal_global_print_uint64(h->proto);
+  module_terminal_global_print_c_string("\", \"hw_size\": \"");
+  module_terminal_global_print_uint64(h->hw_size);
+  module_terminal_global_print_c_string("\", \"proto_size\": \"");
+  module_terminal_global_print_uint64(h->proto_size);
+  module_terminal_global_print_c_string("\", \"operation_type\": \"");
+  const uint16_t operation_type = ntohs(h->operation_type);
+  if(operation_type == module__network__ethernet__arp_operation_type__request)
+  {
+    module_terminal_global_print_c_string("request");
+  }
+  else if(operation_type ==
+    module__network__ethernet__arp_operation_type__response)
+  {
+    module_terminal_global_print_c_string("response");
+  }
+  else
+  {
+    module_terminal_global_print_c_string("UNKNOWN");
+  }
+  module_terminal_global_print_c_string("(");
+  module_terminal_global_print_uint64(operation_type);
+  module_terminal_global_print_c_string(")");
+  module_terminal_global_print_c_string("\", \"sender_mac\": \"");
+  module__network__print_mac(&(h->sender_mac));
+  module_terminal_global_print_c_string("\", \"sender_ip\": \"");
+  module__network__print_ip(h->sender_ip);
+  module_terminal_global_print_c_string("\", \"target_mac\": \"");
+  module__network__print_mac(&(h->target_mac));
+  module_terminal_global_print_c_string("\", \"target_ip\": \"");
+  module__network__print_ip(h->target_ip);
+  module_terminal_global_print_c_string("\" }");
+  module_terminal_global_print_c_string("\n");
+}
 // -------------------------------------------------------------------------- //
 void arp_reply(module__network__packet * response,
   const module__network__packet * const request)
@@ -154,48 +221,33 @@ void arp_reply(module__network__packet * response,
   eth->destination_mac = s_arp->sender_mac;
   eth->ethertype = htons(module__network__ethernet_header_type__arp);
 
-  r_arp->hw_type = htons(1);      // eth_hdr
-  r_arp->proto = htons(0x0800);   // ip_hdr
+  r_arp->hw_type = htons(1); // eth_hdr
+  r_arp->proto = htons(module__network__ethernet_header_type__ip); // ip_hdr
   r_arp->hw_size = 6;
   r_arp->proto_size = 4;
   r_arp->operation_type =
-    htons(network__ethernet__arp_operation_type__response);
+    htons(module__network__ethernet__arp_operation_type__response);
   r_arp->sender_mac = my_mac;
-  r_arp->sender_ip = htonl(167772687); // 10.0.2.15
+  r_arp->sender_ip = htonl(my_ip);
   r_arp->target_mac = s_arp->sender_mac;
   r_arp->target_ip = s_arp->sender_ip;
   print_arp_header(r_arp);
 
   response->length = sizeof(module__network__ethernet_header) +
     sizeof(module__network__arp_header);
-}
-// -------------------------------------------------------------------------- //
-void print_arp_header(const module__network__arp_header * const h)
-{
-  module_terminal_global_print_c_string("arp_header");
-  module_terminal_global_print_c_string("{ \"sender_ip\": \"");
-  module__network__print_ip(h->sender_ip);
-  module_terminal_global_print_c_string("\", \"target_ip\": \"");
-  module__network__print_ip(h->target_ip);
-  module_terminal_global_print_c_string("\", \"operation_type\": \"");
-  const uint16_t operation_type = ntohs(h->operation_type);
-  if(operation_type == network__ethernet__arp_operation_type__request)
+/*
+  const int ETH_MIN_LENGTH = 64;
+  module_terminal_global_print_c_string("add padding=");
+  module_terminal_global_print_uint64(ETH_MIN_LENGTH - response->length);
+  module_terminal_global_print_c_string("\n");
+  while(response->length <= ETH_MIN_LENGTH)
   {
-    module_terminal_global_print_c_string("request");
+    (response->buffer)[response->length++] = 0;
   }
-  else if(operation_type == network__ethernet__arp_operation_type__response)
-  {
-    module_terminal_global_print_c_string("response");
-  }
-  else
-  {
-    module_terminal_global_print_c_string("UNKNOWN");
-  }
-  module_terminal_global_print_c_string("(");
-  module_terminal_global_print_uint64(operation_type);
-  module_terminal_global_print_c_string(")");
-  // print more header fields
-  module_terminal_global_print_c_string("\" }");
+  response->length -= 1;
+*/
+  module_terminal_global_print_c_string("length=");
+  module_terminal_global_print_uint64(response->length);
   module_terminal_global_print_c_string("\n");
 }
 // -------------------------------------------------------------------------- //
@@ -205,17 +257,105 @@ void process_arp_packet(const module__network__packet * const p)
     (const module__network__arp_header * const)(
     p->buffer + sizeof(module__network__ethernet_header)
   );
+  print_hex_bytes(p->buffer, p->length);
   print_arp_header(arp);
   if (ntohs(arp->operation_type) ==
-     network__ethernet__arp_operation_type__request
-//      && arp->target_ip == pk->from->ip
+     module__network__ethernet__arp_operation_type__request
+      && arp->target_ip == htonl(my_ip)
   )
   {
+    module_terminal_global_print_c_string("Replying to ARP\n");
     module__network__packet *response_packet = new_pk();
     arp_reply(response_packet, p);
-//    pk->from->drv->send(pk->from, resp);
+    print_hex_bytes(response_packet->buffer, response_packet->length);
+    module__driver__rtl8139__send_packet(response_packet);
     free(response_packet);
   }
+}
+// -------------------------------------------------------------------------- //
+// Internet Protocol (IP) Packet
+// -------------------------------------------------------------------------- //
+void print_ip_header(const module__network__ip_header * const h)
+{
+  module_terminal_global_print_c_string("ip_header");
+  module_terminal_global_print_c_string("{ \"header_length\": \"");
+  module_terminal_global_print_binary_uint64(h->header_length);
+  module_terminal_global_print_c_string("(");
+  module_terminal_global_print_uint64(h->header_length);
+  module_terminal_global_print_c_string(")\", \"version\": \"");
+  module_terminal_global_print_binary_uint64(h->version);
+  module_terminal_global_print_c_string("(");
+  module_terminal_global_print_uint64(h->header_length);
+  module_terminal_global_print_c_string(")\", \"dscp\": \"");
+  module_terminal_global_print_binary_uint64(h->dscp);
+  module_terminal_global_print_c_string("\", \"total_length\": \"");
+  module_terminal_global_print_uint64(h->total_length);
+  module_terminal_global_print_c_string("\", \"id\": \"");
+  module_terminal_global_print_uint64(h->id);
+  module_terminal_global_print_c_string("\", \"flags_frag\": \"");
+  module_terminal_global_print_binary_uint64(h->flags_frag);
+  module_terminal_global_print_c_string("\", \"ttl\": \"");
+  module_terminal_global_print_uint64(h->ttl);
+  module_terminal_global_print_c_string("\", \"protocol\": \"");
+  if(h->protocol == module__network__ethernet__ip__protocol_type__icmp)
+  {
+    module_terminal_global_print_c_string("ICMP");
+  }
+  else if(h->protocol == module__network__ethernet__ip__protocol_type__tcp)
+  {
+    module_terminal_global_print_c_string("TCP");
+  }
+  else if(h->protocol == module__network__ethernet__ip__protocol_type__udp)
+  {
+    module_terminal_global_print_c_string("UDP");
+  }
+  else
+  {
+    module_terminal_global_print_c_string("UNKNOWN");
+  }
+  module_terminal_global_print_c_string("(");
+  module_terminal_global_print_uint64(h->protocol);
+  module_terminal_global_print_c_string(")");
+  module_terminal_global_print_c_string("\", \"header_checksum\": \"");
+  module_terminal_global_print_uint64(h->header_checksum);
+  module_terminal_global_print_c_string("\", \"source_ip\": \"");
+  module__network__print_ip(h->source_ip);
+  module_terminal_global_print_c_string("\", \"destination_ip\": \"");
+  module__network__print_ip(h->destination_ip);
+  module_terminal_global_print_c_string("\" }");
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
+void process_ip_packet(const module__network__packet * const p)
+{
+  const module__network__ip_header * const ip = ip_hdr(p);
+
+  print_ip_header(ip);
+  if (ip->destination_ip != htonl(my_ip))
+  {
+    module_terminal_global_print_c_string("Got IP packet but not for my IP,"
+      " ignoring.");
+    return;
+  }
+/*
+  switch (ip->protocol)
+  {
+    case IPPROTO_ICMP:
+      echo_icmp(pk);
+      break;
+    case IPPROTO_UDP:
+      socket_dispatch_udp(pk);
+      break;
+    case IPPROTO_TCP:
+      socket_dispatch_tcp(pk);
+      break;
+    default:
+      module_terminal_global_print_c_string("Unknown IP protocol: ");
+      module_terminal_global_print_uint64(ip->protocol);
+      module_terminal_global_print_c_string("\n");
+      break;
+  }
+*/
 }
 // -------------------------------------------------------------------------- //
 // Ethernet Packet
@@ -251,7 +391,7 @@ void print_eth_hdr(const module__network__ethernet_header * const h)
 void module__network__process_ethernet_packet(
   const module__network__packet * const p)
 {
-  print_hex_bytes(p->buffer, p->length);//rx_buff_size);
+//  print_hex_bytes(p->buffer, p->length);//rx_buff_size);
 //  print_hex_bytes(rx_buffer, 64);//rx_buff_size);
   const module__network__ethernet_header * const eth = eth_hdr(p);
   print_eth_hdr(eth);
@@ -262,7 +402,7 @@ void module__network__process_ethernet_packet(
   }
   else if(eth_type == module__network__ethernet_header_type__ip)
   {
-//    module_terminal_global_print_c_string("Got IP packet.\n");
+    module_terminal_global_print_c_string("Got IP packet.\n");
   }
   else
   {

@@ -11,32 +11,36 @@
 #include "module__driver__rtl8139.h"
 // -------------------------------------------------------------------------- //
 uint16_t iobase = 99;
-module_heap_heap_bm nic_heap;
+//module_heap_heap_bm nic_heap;
 uint8_t *rx_buffer = NULL;
 size_t rx_index = 0;
 size_t rx_buff_size = 8192 + 16 + 1500; // 8*1024 + 16
+uint32_t tx_slot = 0;
 // -------------------------------------------------------------------------- //
 #define MASTER_DATA 0x21
 #define SLAVE_DATA 0xA1
 void pic_irq_unmask(int irq)
 {
-        unsigned char mask;
+  unsigned char mask;
 
-        if (irq > 15 || irq < 0)
-        {
-//                panic("pic: can't unmask irq %i\n", irq);
-          return;
-        }
+  if (irq > 15 || irq < 0)
+  {
+//    panic("pic: can't unmask irq %i\n", irq);
+    return;
+  }
 
-        if (irq >= 8) {
-                mask = module_kernel_in_8(SLAVE_DATA);
-                mask &= ~(1 << (irq - 8));
-                module_kernel_out_8(SLAVE_DATA, mask);
-        } else {
-                mask = module_kernel_in_8(MASTER_DATA);
-                mask &= ~(1 << (irq));
-                module_kernel_out_8(MASTER_DATA, mask);
-        }
+  if (irq >= 8)
+  {
+    mask = module_kernel_in_8(SLAVE_DATA);
+    mask &= ~(1 << (irq - 8));
+    module_kernel_out_8(SLAVE_DATA, mask);
+  }
+  else
+  {
+    mask = module_kernel_in_8(MASTER_DATA);
+    mask &= ~(1 << (irq));
+    module_kernel_out_8(MASTER_DATA, mask);
+  }
 }
 // -------------------------------------------------------------------------- //
 static inline uintptr_t round_down(uintptr_t val, uintptr_t place)
@@ -52,6 +56,74 @@ static inline uintptr_t round_up(uintptr_t val, uintptr_t place)
 static uint8_t rx_empty()
 {
   return (module_kernel_in_8(iobase + 0x37) & 1) != 0;
+}
+// -------------------------------------------------------------------------- //
+#define ETH_MTU 1536
+void module__driver__rtl8139__send_packet(
+  const module__network__packet * const p)
+{
+  if(!(p->length > 0 && p->length < ETH_MTU))
+  {
+    // problem
+    module_terminal_global_print_c_string("Problem sending packet.");
+  }
+//  virt_addr_t data = (virt_addr_t)p->buffer;
+//  phys_addr_t phy_data = vmm_virt_to_phy(data);
+
+//  module_terminal_global_print_c_string("SND pk len=");
+//  module_terminal_global_print_uint64(p->length);
+//  module_terminal_global_print_c_string("\n");
+//  module_terminal_global_print_c_string("tx_slot=");
+//  module_terminal_global_print_uint64(tx_slot);
+//  module_terminal_global_print_c_string("\n");
+  uint16_t tx_addr_off = 0x20 + (tx_slot - 1) * 4;
+//  module_terminal_global_print_c_string("tx_addr_off=");
+//  module_terminal_global_print_hex_uint64(tx_addr_off);
+//  module_terminal_global_print_c_string("\n");
+  uint16_t ctrl_reg_off = 0x10 + (tx_slot - 1) * 4;
+//  module_terminal_global_print_c_string("ctrl_reg_off=");
+//  module_terminal_global_print_hex_uint64(ctrl_reg_off);
+//  module_terminal_global_print_c_string("\n");
+
+  module_kernel_out_32(iobase + tx_addr_off, (uint32_t)(p->buffer));
+  module_kernel_out_32(iobase + ctrl_reg_off, p->length);
+
+  // TODO: could let this happen async and just make sure the descriptor
+  // is done when we loop back around to it.
+
+  size_t take = 0; // OWNership of data
+  take = 0b10000000000000;
+//  take = 0x100; // 0b100000000
+
+  size_t conf = 0;
+  conf = 0b1000000000000000;
+//  conf = 0x400;
+  uint32_t x = 0;
+  x = module_kernel_in_32(iobase + ctrl_reg_off);
+  while ( !(x & take) )
+  {
+    // await device taking packet
+    x = module_kernel_in_32(iobase + ctrl_reg_off);
+  }
+//  module_terminal_global_print_c_string("x=");
+//  module_terminal_global_print_binary_uint64(x);
+//  module_terminal_global_print_c_string("\n");
+  x = module_kernel_in_32(iobase + ctrl_reg_off);
+  while ( !(x & conf) )
+  {
+    // await send confirmation
+    x = module_kernel_in_32(iobase + ctrl_reg_off);
+  }
+  // gets out with 000 ... 1010 0000 0011 1000
+//  module_terminal_global_print_c_string("x=");
+//  module_terminal_global_print_binary_uint64(x);
+//  module_terminal_global_print_c_string("\n");
+
+  // rtl8139 has 4 sending buffers see:
+  // https://wiki.osdev.org/RTL8139#Transmitting_Packets
+  // slots are 1, 2, 3, 4 - MUST be used in sequence
+  tx_slot %= 4;
+  tx_slot += 1;
 }
 // -------------------------------------------------------------------------- //
 #define RX_OK 0x01
@@ -74,12 +146,13 @@ static uint8_t rx_empty()
 #define RX_BROADCAST 0x2000
 #define RX_PHYSICAL 0x4000
 #define RX_MULTICAST 0x8000
+#define TX_STATUS 0x10
 void module_network_interrupt_handler(module_interrupt_registers_t x)
 {
   (void)x; // avoid unused param
   uint16_t interrupt_flag = module_kernel_in_16(iobase + 0x3e);
   module_terminal_global_print_c_string("NIC IRQ flag=");
-  module_terminal_global_print_uint64(interrupt_flag);
+  module_terminal_global_print_binary_uint64(interrupt_flag);
   module_terminal_global_print_c_string("\n");
   if (interrupt_flag == 0)
   {
@@ -89,14 +162,23 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
   }
 
 
-	if (interrupt_flag & (RX_OK | RX_ERR))
-	{
-		module_terminal_global_print_c_string("Packet received.\n");
-	}
-	else if (interrupt_flag & (TX_OK | TX_ERR))
-	{
-		module_terminal_global_print_c_string("Packet sent.\n");
-	}
+  if (interrupt_flag & RX_OK)
+  {
+    module_terminal_global_print_c_string("Packet received.\n");
+  }
+  if (interrupt_flag & RX_ERR)
+  {
+    module_terminal_global_print_c_string("Packet receive error.\n");
+  }
+  if (interrupt_flag & TX_ERR)
+  {
+    module_terminal_global_print_c_string("Packet sending error.\n");
+  }
+  if (interrupt_flag & TX_OK)
+  {
+    module_terminal_global_print_c_string("Packet sent.\n");
+    module_kernel_in_32(iobase + TX_STATUS + (tx_slot-1) * 4);
+  }
 
   // Acknowledge the interrupt
   module_kernel_out_16(iobase + 0x3e, interrupt_flag);
@@ -104,7 +186,7 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
   if (!(interrupt_flag & 1))
   {
     module_terminal_global_print_c_string("This card interrupted, but there is"
-      " no packet. Ack and out.\n");
+      " no incoming packet. Ack and out.\n");
     // Acknowledge the interrupt
 //    module_kernel_out_16(iobase + 0x3e, interrupt_flag);
     return;
@@ -148,8 +230,8 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
       {
         module_terminal_global_print_c_string("Got a bad packet.\n");
       } else {
-        pk = (module__network__packet*)module_heap_alloc(&nic_heap,
-          sizeof(module__network__packet) + length);
+        pk = (module__network__packet*)malloc(sizeof(module__network__packet)
+          + length);
         if(pk == NULL)
         {
           module_terminal_global_print_c_string("NIC packet alloc is NULL!\n");
@@ -160,7 +242,7 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
       }
       module__network__process_ethernet_packet(pk);
       // end
-      module_heap_free(&nic_heap, pk);
+      free(pk);
       rx_index += round_up(length + 4, 4);
       rx_index %= 8192;
       module_kernel_out_16(iobase + 0x38, rx_index - 16);
@@ -245,14 +327,14 @@ void module__driver__rtl8139__test()
   // step 7 - Init Receive buffer
   module_terminal_global_print_c_string("Initializing network RX buffer ...\n");
   {
-    module_heap_init(&nic_heap);
-    module_heap_add_block(&nic_heap, 0x110000, 1024*1024, 16);
-    rx_buffer = (uint8_t*)module_heap_alloc(&nic_heap, rx_buff_size);
+//    module_heap_init(&nic_heap);
+//    module_heap_add_block(&nic_heap, 0x110000, 1024*1024, 16);
+    rx_buffer = (uint8_t*)malloc(rx_buff_size);
     if(rx_buffer == 0)
     {
       module_terminal_global_print_c_string("NIC rx_buffer= NULL !!!");
     }
-    module_kernel_memset(rx_buffer, 9, rx_buff_size);
+    module_kernel_memset(rx_buffer, 0, rx_buff_size);
 //    print_hex_bytes(rx_buffer, 64);//rx_buff_size);
     // For this part, we will send the chip a memory location to use as its receive buffer start location. One way to do it, would be to define a buffer variable and send that variables memory location to the RBSTART register (0x30).
     // Note that 'rx_buffer' needs to be a pointer to a "physical address". In this case a size of 8192 + 16 (8K + 16 bytes) is recommended, see below.
@@ -270,13 +352,14 @@ void module__driver__rtl8139__test()
   {
     // 0x3c = Interrupt Mask Register
     module_kernel_out_16(iobase + 0x3c, (RX_OK | TX_OK | TX_ERR));
-//    module_kernel_out_32(iobase + 0x40, 0x600); // send larger DMA bursts
+    module_kernel_out_32(iobase + 0x40, 0x600); // send larger DMA bursts
     // 0x44 = Receive Config Register
-    module_kernel_out_32(iobase + 0x44,
-      (RCR_AAP | RCR_APM | RCR_AM | RCR_AB | RCR_WRAP)); // accept all packets + unlimited DMA
-    module_kernel_out_32(iobase + 0x4c, 0x0); // RX_MISSED
+    module_kernel_out_32(iobase + 0x44, 0x68f);
+//      (RCR_AAP | RCR_APM | RCR_AM | RCR_AB | RCR_WRAP)); // accept all packets + unlimited DMA
+//    module_kernel_out_32(iobase + 0x4c, 0x0); // RX_MISSED
     module_kernel_out_8(iobase + 0x37, 0x0c); // enable rx and tx bits high
   }
+  tx_slot = 1;
   module_terminal_global_print_c_string("NIC enabled RX & TX.\n");
 
 
