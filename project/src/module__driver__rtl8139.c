@@ -175,9 +175,9 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 {
   (void)x; // avoid unused param
   uint16_t interrupt_flag = module_kernel_in_16(iobase + 0x3e);
-  module_terminal_global_print_c_string("NIC IRQ flag=");
-  module_terminal_global_print_binary_uint64(interrupt_flag);
-  module_terminal_global_print_c_string("\n");
+//  module_terminal_global_print_c_string("NIC IRQ flag=");
+//  module_terminal_global_print_binary_uint64(interrupt_flag);
+//  module_terminal_global_print_c_string("\n");
   if (interrupt_flag == 0)
   {
     module_terminal_global_print_c_string("This card did not interrupt,"

@@ -93,6 +93,9 @@ void kernel_main()
   module_pci_detect_devices();
   module_pci_test();
   module__driver__rtl8139__test();
+  module_terminal_global_print_c_string("Press any key to send NIC data...");
+  module_keyboard_wait_keypress();
+  module__network__test2();
 //  test_cpp();
 
 // -------------------------------------------------------------------------- //

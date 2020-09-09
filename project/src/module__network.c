@@ -283,17 +283,71 @@ void process_arp_packet(const module__network__packet * const p)
 // -------------------------------------------------------------------------- //
 // Transmission Control Protocol (TCP) Packet
 // -------------------------------------------------------------------------- //
+void tcp_checksum(module__network__packet *p)
+{
+  module__network__ip_header *ip = ip_hdr(p);
+  module__network__ip__tcp_header *tcp = tcp_hdr(ip);
+
+  int length = ntohs(ip->total_length);
+  int n_bytes = length - sizeof(module__network__ip_header);
+
+  struct tcp_pseudoheader
+  {
+    uint32_t source_ip;
+    uint32_t destination_ip;
+    uint8_t _zero;
+    uint8_t protocol;
+    uint16_t tcp_length;
+  };
+  struct tcp_pseudoheader t =
+  {
+    ip->source_ip,
+    ip->destination_ip,
+    0,
+    module__network__ethernet__ip__protocol_type__tcp,
+    htons(n_bytes),
+  };
+
+  uint32_t sum = 0;
+  uint16_t *c = (uint16_t *)&t;
+  for (size_t i=0; i<sizeof(t)/2; i++)
+  {
+    sum += c[i];
+  }
+
+  c = (uint16_t *)tcp;
+  for (int i=0; i<n_bytes/2; i++)
+  {
+    sum += c[i];
+  }
+
+  if (n_bytes % 2 != 0)
+  {
+    uint16_t last = ((uint8_t *)ip)[length-1];
+    sum += last;
+  }
+
+  while (sum >> 16)
+  {
+    sum = (sum & 0xFFFF) + (sum >> 16);
+  }
+
+  tcp->checksum = ~(uint16_t)sum;
+}
+// -------------------------------------------------------------------------- //
 void print_ip_tcp_header(const module__network__ip__tcp_header * const h)
 {
   module_terminal_global_print_c_string("tcp_header");
   module_terminal_global_print_c_string("{ \"source_port\": \"");
-  module_terminal_global_print_uint64(h->source_port);
+  module_terminal_global_print_uint64(ntohs(h->source_port));
   module_terminal_global_print_c_string("\", \"destination_port\": \"");
-  module_terminal_global_print_uint64(h->destination_port);
+  module_terminal_global_print_uint64(ntohs(h->destination_port));
   module_terminal_global_print_c_string("\", \"seq\": \"");
   module_terminal_global_print_uint64(h->seq);
   module_terminal_global_print_c_string("\", \"ack\": \"");
   module_terminal_global_print_uint64(h->ack);
+  module_terminal_global_print_c_string("\", \"f_ns\": \"");
+  module_terminal_global_print_uint64(h->f_ns);
   module_terminal_global_print_c_string("\", \"_reserved\": \"");
   module_terminal_global_print_uint64(h->_reserved);
   module_terminal_global_print_c_string("\", \"offset\": \"");
@@ -311,9 +365,11 @@ void print_ip_tcp_header(const module__network__ip__tcp_header * const h)
   module_terminal_global_print_uint64(h->f_ack);
   module_terminal_global_print_c_string("\", \"f_urg\": \"");
   module_terminal_global_print_uint64(h->f_urg);
+  module_terminal_global_print_c_string("\", \"f_ece\": \"");
+  module_terminal_global_print_uint64(h->f_ece);
+  module_terminal_global_print_c_string("\", \"f_cwr\": \"");
+  module_terminal_global_print_uint64(h->f_cwr);
 
-  module_terminal_global_print_c_string("\", \"_reserved2\": \"");
-  module_terminal_global_print_uint64(h->_reserved2);
   module_terminal_global_print_c_string("\", \"window\": \"");
   module_terminal_global_print_uint64(h->window);
   module_terminal_global_print_c_string("\", \"checksum\": \"");
@@ -324,6 +380,65 @@ void print_ip_tcp_header(const module__network__ip__tcp_header * const h)
   module_terminal_global_print_c_string("\n");
 }
 // -------------------------------------------------------------------------- //
+// declare ip_checksum - it is defined below, in IP section, but used here
+void ip_checksum(module__network__packet *p);
+void make_ip_tcp_packet(module__network__packet *p,
+  const uint32_t destination_ip, const uint16_t destination_port,
+  const uint16_t source_port, const int flags, const void * const data,
+  const size_t len)
+{
+  module__network__ethernet_header *eth = eth_hdr(p);
+  eth->ethertype = htons(module__network__ethernet_header_type__ip);
+
+  module__network__ip_header *ip = ip_hdr(p);
+  ip->version = 4;
+  ip->header_length = 5;
+  ip->dscp = 0;
+  ip->id = ntohs(1); //s->ip_id);
+  ip->flags_frag = htons(0x4000); // DNF
+  ip->ttl = 64;
+  ip->protocol = module__network__ethernet__ip__protocol_type__tcp;
+  ip->source_ip = htonl(my_ip); //s->local_ip;
+  ip->destination_ip = destination_ip;
+  ip->total_length = htons(sizeof(module__network__ip_header) +
+    sizeof(module__network__ip__tcp_header) + len);
+
+  module__network__ip__tcp_header *tcp = tcp_hdr(ip);
+  tcp->source_port = source_port; //54321;//s->local_port;
+  tcp->destination_port = destination_port; //80;//s->remote_port;
+  tcp->seq = htonl(3768610427);//0); //s->send_seq);
+  if (flags & module__network__ip__tcp_flag__ack)
+  {
+    tcp->ack = htonl(1); //s->recv_seq);
+  }
+  else
+  {
+    tcp->ack = 0;
+  }
+  tcp->f_ns = 0;
+  tcp->_reserved = 0;
+  tcp->offset = 10/2;//5; // 5=no_opt & 10=opt
+  tcp->f_fin = ((flags & module__network__ip__tcp_flag__fin) > 0);
+  tcp->f_syn = ((flags & module__network__ip__tcp_flag__syn) > 0);
+  tcp->f_rst = ((flags & module__network__ip__tcp_flag__rst) > 0);
+  tcp->f_psh = ((flags & module__network__ip__tcp_flag__psh) > 0);
+  tcp->f_ack = ((flags & module__network__ip__tcp_flag__ack) > 0);
+  tcp->f_urg = ((flags & module__network__ip__tcp_flag__urg) > 0);
+  tcp->f_ece = 0;
+  tcp->f_cwr = 0;
+  tcp->window = htons(64240);//0x1000);
+  tcp->checksum = 0;
+  tcp->urg_ptr = 0;
+
+  module_kernel_memcpy(data, tcp->data, len);
+
+  p->length = ntohs(ip->total_length)
+    + sizeof(module__network__ethernet_header);
+
+  tcp_checksum(p);
+  ip_checksum(p);
+}
+// -------------------------------------------------------------------------- //
 void process_ip_tcp_packet(const module__network__packet * const p)
 {
   const module__network__ip_header * const ip = ip_hdr(p);
@@ -331,38 +446,27 @@ void process_ip_tcp_packet(const module__network__packet * const p)
 
   print_hex_bytes(p->buffer, p->length);
   print_ip_tcp_header(tcp);
-/*
-  if (ip->destination_ip != htonl(my_ip))
-  {
-    module_terminal_global_print_c_string("Got IP packet but not for my IP,"
-      " ignoring.");
-    return;
-  }
 
-  switch (ip->protocol)
-  {
-    case module__network__ethernet__ip__protocol_type__icmp:
-      module_terminal_global_print_c_string("Handling IP_ICMP packet.\n");
-//      echo_icmp(p);
-      break;
-    case module__network__ethernet__ip__protocol_type__tcp:
-      module_terminal_global_print_c_string("Handling IP_TCP packet.\n");
-      process_ip_tcp_packet(p);
-      break;
-    case module__network__ethernet__ip__protocol_type__udp:
-      module_terminal_global_print_c_string("Handling IP_UDP packet.\n");
-//      socket_dispatch_udp(p);
-      break;
-    default:
-      module_terminal_global_print_c_string("Unknown IP protocol: ");
-      module_terminal_global_print_uint64(ip->protocol);
-      module_terminal_global_print_c_string("\n");
-      break;
-  }
-*/
+  module_terminal_global_print_c_string("Processing IP_TCP packet\n");
+//  module__network__test2();
 }
 // -------------------------------------------------------------------------- //
 // Internet Protocol (IP) Packet
+// -------------------------------------------------------------------------- //
+void ip_checksum(module__network__packet *p)
+{
+  module__network__ip_header *ip = ip_hdr(p);
+
+  uint16_t *ip_chunks = (uint16_t *)ip;
+  uint32_t checksum32 = 0;
+  for (int i=0; i<ip->header_length*2; i+=1)
+  {
+    checksum32 += ip_chunks[i];
+  }
+  uint16_t checksum = (checksum32 & 0xFFFF) + (checksum32 >> 16);
+
+  ip->header_checksum = ~checksum;
+}
 // -------------------------------------------------------------------------- //
 void print_ip_header(const module__network__ip_header * const h)
 {
@@ -503,4 +607,25 @@ void module__network__process_ethernet_packet(
   }
 }
 // -------------------------------------------------------------------------- //
-
+void module__network__test2()
+{
+  module_terminal_global_print_c_string("Sending IP_TCP packet\n");
+  module__network__packet *response = new_pk();
+  uint32_t dst_ip = 0;
+//  dst_ip = 3627734734; // = 216.58.214.206 = google.com
+//  dst_ip = 3232286790; // 192.168.200.70 = host
+  dst_ip = 167772674; // 10.0.2.2 = GW
+  dst_ip = htonl(dst_ip);
+  uint16_t dst_port = htons(1030); // web server
+  make_ip_tcp_packet(response, dst_ip, dst_port,
+    htons(9876),
+    (module__network__ip__tcp_flag__syn),
+    "\0", 1);//"\x02\x04\x05\xb4\x04\x02\x08\x0a\x31\xe6\xe7\x6c\x0\x0\x0\x0\x01\x03\x03\x07", 20);
+  print_hex_bytes(response->buffer, response->length);
+  const module__network__ip_header * const response_ip = ip_hdr(response);
+  const module__network__ip__tcp_header * const response_tcp =
+    tcp_hdr(response_ip);
+  print_ip_tcp_header(response_tcp);
+  module__driver__rtl8139__send_packet(response);
+  free(response);
+}

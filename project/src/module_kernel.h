@@ -80,7 +80,8 @@ void module_kernel_memset(void *start, const char value, const size_t length);
  * written here.
  * @param[in] size - Number of bytes to vopy from source to destination buffer.
  */
-void module_kernel_memcpy(void* source, void* destination, const size_t size);
+void module_kernel_memcpy(const void * const source, void* destination,
+  const size_t size);
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //

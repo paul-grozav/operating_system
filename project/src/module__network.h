@@ -272,15 +272,21 @@ typedef struct __attribute__((__packed__))
   uint16_t destination_port;
   uint32_t seq;
   uint32_t ack;
-  uint16_t _reserved : 4;
+  uint16_t f_ns : 1;
+  uint16_t _reserved : 3;
   uint16_t offset : 4;
+
+  //! finish
   uint16_t f_fin : 1;
   uint16_t f_syn : 1;
   uint16_t f_rst : 1;
+
+  //! push
   uint16_t f_psh : 1;
   uint16_t f_ack : 1;
   uint16_t f_urg : 1;
-  uint16_t _reserved2 : 2;
+  uint16_t f_ece : 1;
+  uint16_t f_cwr : 1;
   uint16_t window;
   uint16_t checksum;
   uint16_t urg_ptr;
@@ -295,6 +301,7 @@ void module__network__print_mac(const module__network__mac_address * const ma);
 void module__network__print_ip(const uint32_t ip);
 void module__network__process_ethernet_packet(
   const module__network__packet * const p);
+void module__network__test2();
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //

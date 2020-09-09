@@ -60,7 +60,8 @@ void module_kernel_memset(void *start, const char value, const size_t length)
   }
 }
 // -------------------------------------------------------------------------- //
-void module_kernel_memcpy(void* source, void* destination, const size_t size)
+void module_kernel_memcpy(const void * const source, void* destination,
+  const size_t size)
 {
   for(size_t i=0; i<size; i++)
   {
