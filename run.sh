@@ -72,9 +72,6 @@ ${c_compiler_params} -c ${src_folder}/module_keyboard.c -o module_keyboard.o &&
 ${c_compiler_params} -c ${src_folder}/module_pci.c -o module_pci.o &&
 ${c_compiler_params} -c ${src_folder}/module__driver__rtl8139.c -o module__driver__rtl8139.o &&
 ${c_compiler_params} -c ${src_folder}/module__network.c -o module__network.o &&
-# Compile C++
-#cpp_compiler_params="${target}-g++ -I${src_folder} -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti" &&
-#${cpp_compiler_params} -c ${src_folder}/test.cpp -o test.o &&
 # Link
 ${target}-gcc -ffreestanding -nostdlib -g -T ../linker.ld \
   start.o kernel.o module_kernel.o module_terminal.o module_serial.o \
