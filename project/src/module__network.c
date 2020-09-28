@@ -315,7 +315,15 @@ void tcp_checksum(module__network__packet *p)
     sum += c[i];
   }
 
+  // Disable warning for this line:
+  // warning: converting a packed 'module__network__ip__tcp_header' {aka
+  // 'struct <anonymous>'} pointer (alignment 1) to a 'uint16_t' {aka 'short
+  // unsigned int'} pointer (alignment 2) may result in an unaligned pointer
+  // value [-Waddress-of-packed-member]
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
   c = (uint16_t *)tcp;
+  #pragma GCC diagnostic pop
   for (int i=0; i<n_bytes/2; i++)
   {
     sum += c[i];
@@ -457,7 +465,15 @@ void ip_checksum(module__network__packet *p)
 {
   module__network__ip_header *ip = ip_hdr(p);
 
+  // Disable warning:
+  // warning: converting a packed 'module__network__ip_header' {aka
+  // 'struct <anonymous>'} pointer (alignment 1) to a 'uint16_t' {aka 'short
+  // unsigned int'} pointer (alignment 2) may result in an unaligned pointer
+  // value [-Waddress-of-packed-member]
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
   uint16_t *ip_chunks = (uint16_t *)ip;
+  #pragma GCC diagnostic pop
   uint32_t checksum32 = 0;
   for (int i=0; i<ip->header_length*2; i+=1)
   {
