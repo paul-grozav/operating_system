@@ -272,6 +272,10 @@ typedef struct __attribute__((__packed__))
   uint16_t destination_port;
   uint32_t seq;
   uint32_t ack;
+
+  // byte = 0x01 = 0000 0001 = (ns=1, reserved=0, offset=0)
+  // byte = 0xf0 = 1111 0000 = (ns=0, reserved=0, offset=15)
+  // byte = 0x0e = 0000 1110 = (ns=0, reserved=7, offset=0)
   uint16_t f_ns : 1;
   uint16_t _reserved : 3;
   uint16_t offset : 4;
