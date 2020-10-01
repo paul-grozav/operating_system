@@ -58,30 +58,6 @@ static uint8_t rx_empty()
   return (module_kernel_in_8(iobase + 0x37) & 1) != 0;
 }
 // -------------------------------------------------------------------------- //
-void print_hex_bytes2(const uint8_t * const base, const size_t count)
-{
-  char buffer[20+1];
-  size_t l = 0;
-  for (size_t i=0; i<count; i++)
-  {
-    l = module_base_uint64_to_ascii_base16(*(base + i), buffer);
-    if(l == 1)
-    {
-      buffer[2] = '\0';
-      buffer[1] = buffer[0];
-      buffer[0] = '0';
-    } else {
-      buffer[l] = '\0';
-    }
-    module_terminal_global_print_c_string(buffer);
-    if(i < count-1)
-    {
-      module_terminal_global_print_c_string(" ");
-    }
-  }
-  module_terminal_global_print_c_string("\n");
-}
-// -------------------------------------------------------------------------- //
 #define ETH_MTU 1536
 void module__driver__rtl8139__send_packet(
   const module__network__packet * const p)
@@ -89,7 +65,9 @@ void module__driver__rtl8139__send_packet(
   if(!(p->length > 0 && p->length < ETH_MTU))
   {
     // problem
-    module_terminal_global_print_c_string("Problem sending packet.");
+    module_terminal_global_print_c_string("Problem sending packet with length=");
+    module_terminal_global_print_uint64(p->length);
+    module_terminal_global_print_c_string("\n");
   }
 //  virt_addr_t data = (virt_addr_t)p->buffer;
 //  phys_addr_t phy_data = vmm_virt_to_phy(data);

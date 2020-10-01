@@ -147,6 +147,16 @@ module__network__packet * new_pk()
   return new_pk;
 }
 // -------------------------------------------------------------------------- //
+module__network__packet * new_pk_with_data(const char * const data,
+  const size_t length)
+{
+  const size_t packet_size = sizeof(module__network__packet) + length;
+  module__network__packet * new_pk = malloc(packet_size);
+  module_kernel_memcpy(data, new_pk->buffer, length);
+  new_pk->length = length;
+  return new_pk;
+}
+// -------------------------------------------------------------------------- //
 module__network__ethernet_header * eth_hdr(
   const module__network__packet * const p)
 {
@@ -173,6 +183,37 @@ module__network__ip__tcp_header * tcp_hdr(
   return (module__network__ip__tcp_header *)(
     ( (uint8_t *)(ip_header) ) + (ip_header->header_length * 4)
   );
+}
+// -------------------------------------------------------------------------- //
+void make_ip_packet(module__network__packet *p,
+  const module__network__mac_address dest_mac, const uint32_t destination_ip,
+  const void * const data, const size_t len)
+{
+  module__network__ethernet_header *eth = eth_hdr(p);
+  eth->source_mac = my_mac;
+
+  eth->destination_mac = dest_mac;
+  eth->ethertype = htons(module__network__ethernet_header_type__ip);
+
+  module__network__ip_header *ip = ip_hdr(p);
+  ip->version = 4;
+  ip->header_length = 5;
+  ip->dscp = 0x10;
+  ip->id = ntohs(45715);//);//1); //s->ip_id);
+  ip->flags_frag = htons(0x4000);//0);//0x4000); // DNF
+  ip->ttl = 64;
+  ip->protocol = module__network__ethernet__ip__protocol_type__udp;
+  ip->source_ip = htonl(my_ip); //s->local_ip;
+  ip->destination_ip = destination_ip;
+  ip->total_length = htons(sizeof(module__network__ip_header) +
+    sizeof(module__network__ip__tcp_header) + len);
+
+  module_kernel_memcpy(data, ip->data, len);
+
+  p->length = ntohs(ip->total_length)
+    + sizeof(module__network__ethernet_header);
+
+  module__network__ip_checksum(p);
 }
 // -------------------------------------------------------------------------- //
 // ARP Packet
@@ -412,8 +453,6 @@ void print_ip_tcp_header(const module__network__ip__tcp_header * const h)
   module_terminal_global_print_c_string("\n");
 }
 // -------------------------------------------------------------------------- //
-// declare ip_checksum - it is defined below, in IP section, but used here
-void ip_checksum(module__network__packet *p);
 void make_ip_tcp_packet(module__network__packet *p,
   const uint32_t destination_ip, const uint16_t destination_port,
   const uint16_t source_port, const int flags, const void * const data,
@@ -472,7 +511,7 @@ void make_ip_tcp_packet(module__network__packet *p,
     + sizeof(module__network__ethernet_header);
 
   tcp_checksum(p);
-  ip_checksum(p);
+  module__network__ip_checksum(p);
 }
 // -------------------------------------------------------------------------- //
 void process_ip_tcp_packet(const module__network__packet * const p)
@@ -489,7 +528,7 @@ void process_ip_tcp_packet(const module__network__packet * const p)
 // -------------------------------------------------------------------------- //
 // Internet Protocol (IP) Packet
 // -------------------------------------------------------------------------- //
-void ip_checksum(module__network__packet *p)
+void module__network__ip_checksum(module__network__packet *p)
 {
   module__network__ip_header *ip = ip_hdr(p);
 
@@ -510,7 +549,7 @@ void ip_checksum(module__network__packet *p)
   uint16_t checksum = (checksum32 & 0xFFFF) + (checksum32 >> 16);
 
   ip->header_checksum = ~checksum;
-  ip->header_checksum = 0x1870; // !!!!!!!!!!!!!
+//  ip->header_checksum = 0x1870; // !!!!!!!!!!!!!
 }
 // -------------------------------------------------------------------------- //
 void print_ip_header(const module__network__ip_header * const h)
@@ -654,6 +693,97 @@ void module__network__process_ethernet_packet(
 // -------------------------------------------------------------------------- //
 void module__network__test2()
 {
+  // multicast listener report message v2
+  {
+  module_terminal_global_print_c_string("Sending mlrmv2\n");
+  module__network__packet *p = new_pk_with_data(
+"\x33\x33\x00\x00\x00\x16\x52\x54\x00\x12\x13\x56\x86\xdd\x60\x00" \
+"\x00\x00\x00\x24\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\xff\x02\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x16\x3a\x00\x05\x02\x00\x00\x01\x00\x8f\x00" \
+"\x5c\x22\x00\x00\x00\x01\x04\x00\x00\x00\xff\x02\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x01\xff\x12\x13\x56"
+  , 90);
+  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
+  module__driver__rtl8139__send_packet(p);
+  module__driver__rtl8139__send_packet(p);
+  free(p);
+  }
+  // DHCP discover
+  {
+  module_terminal_global_print_c_string("Sending DHCP discovery\n");
+  module__network__packet *p = new_pk_with_data(
+"\xff\xff\xff\xff\xff\xff\x52\x54\x00\x12\x13\x56\x08\x00\x45\x10" \
+"\x01\x48\x00\x00\x00\x00\x80\x11\x39\x96\x00\x00\x00\x00\xff\xff" \
+"\xff\xff\x00\x44\x00\x43\x01\x34\xd3\x9b\x01\x01\x06\x00\x89\xcd" \
+"\xf8\x41\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x52\x54\x00\x12\x13\x56\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x63\x82\x53\x63\x35\x01\x01\x32\x04\x0a" \
+"\x00\x02\x0f\x0c\x06\x64\x65\x62\x69\x61\x6e\x37\x0d\x01\x1c\x02" \
+"\x03\x0f\x06\x77\x0c\x2c\x2f\x1a\x79\x2a\x3d\x13\xff\x00\x12\x13" \
+"\x56\x00\x01\x00\x01\x26\xd1\x38\xdb\x52\x54\x00\x12\x34\x56\xff" \
+"\x00\x00\x00\x00\x00\x00"
+  , 342);
+  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
+  module__driver__rtl8139__send_packet(p);
+  free(p);
+  }
+  // DHCP request
+  {
+  module_terminal_global_print_c_string("Sending DHCP request\n");
+  module__network__packet *p = new_pk_with_data(
+"\xff\xff\xff\xff\xff\xff\x52\x54\x00\x12\x13\x56\x08\x00\x45\x10" \
+"\x01\x48\x00\x00\x00\x00\x80\x11\x39\x96\x00\x00\x00\x00\xff\xff" \
+"\xff\xff\x00\x44\x00\x43\x01\x34\xcb\x59\x01\x01\x06\x00\x89\xcd" \
+"\xf8\x41\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x52\x54\x00\x12\x13\x56\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
+"\x00\x00\x00\x00\x00\x00\x63\x82\x53\x63\x35\x01\x03\x36\x04\x0a" \
+"\x00\x02\x02\x32\x04\x0a\x00\x02\x0f\x0c\x06\x64\x65\x62\x69\x61" \
+"\x6e\x37\x0d\x01\x1c\x02\x03\x0f\x06\x77\x0c\x2c\x2f\x1a\x79\x2a" \
+"\x3d\x13\xff\x00\x12\x13\x56\x00\x01\x00\x01\x26\xd1\x38\xdb\x52" \
+"\x54\x00\x12\x34\x56\xff"
+  , 342);
+  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
+  module__driver__rtl8139__send_packet(p);
+  free(p);
+  }
+  // end
+  module_terminal_global_print_c_string("NET TEST END\n");
+//  return;
+
+
+
+
+
+
+
+
+
+
   module_terminal_global_print_c_string("Sending ARP Query\n");
   module__network__packet *request = new_pk();
   arp_query(request, 167772674); // 10.0.2.2 
@@ -691,3 +821,8 @@ void module__network__test2()
   module__driver__rtl8139__send_packet(response);
   free(response);
 }
+// -------------------------------------------------------------------------- //
+void module__network__queue__process()
+{
+}
+// -------------------------------------------------------------------------- //

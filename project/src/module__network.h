@@ -34,6 +34,9 @@ enum module__network__ethernet_header_type
 
   //! An ARP header follows the ETH header
   module__network__ethernet_header_type__arp = 0x0806,
+
+  //! An ARP header follows the ETH header
+  module__network__ethernet_header_type__ip_v6 = 0x86dd,
 };
 // -------------------------------------------------------------------------- //
 //! A 6-byte MAC address
@@ -54,7 +57,7 @@ typedef struct __attribute__((__packed__))
   //! The MAC address of the source machine
   module__network__mac_address source_mac;
 
-  //! Type of ethernet packet/protocol: ARP, IP, etc.
+  //! Type of ethernet packet/protocol: ARP, IP, IPv6, etc.
   uint16_t ethertype;
 
   //! The following data using the ethertype protocol.
@@ -104,6 +107,13 @@ enum module__network__ethernet__arp_operation_type
 // -------------------------------------------------------------------------- //
 // Internet Protocol (IP) Packet
 // -------------------------------------------------------------------------- //
+/**
+ * Create checksum for ip packet.
+ * @param[in] p - packet to create the checksum for. The checksum will be saved
+ * inside this packet's specific field.
+ */
+void module__network__ip_checksum(module__network__packet *p);
+
 /**
  * This is present after the ETH header, if it's an IP packet.
  * See: https://en.wikipedia.org/wiki/IPv4#Packet_structure
@@ -306,6 +316,7 @@ void module__network__print_ip(const uint32_t ip);
 void module__network__process_ethernet_packet(
   const module__network__packet * const p);
 void module__network__test2();
+void module__network__queue__process();
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //

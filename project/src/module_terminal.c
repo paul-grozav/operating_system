@@ -122,6 +122,30 @@ void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
   }
 }
 // -------------------------------------------------------------------------- //
+void module_terminal_print_buffer_hex_bytes2(const uint8_t * const base, const size_t count)
+{
+  char buffer[20+1];
+  size_t l = 0;
+  for (size_t i=0; i<count; i++)
+  {
+    l = module_base_uint64_to_ascii_base16(*(base + i), buffer);
+    if(l == 1)
+    {
+      buffer[2] = '\0';
+      buffer[1] = buffer[0];
+      buffer[0] = '0';
+    } else {
+      buffer[l] = '\0';
+    }
+    module_terminal_global_print_c_string(buffer);
+    if(i < count-1)
+    {
+      module_terminal_global_print_c_string(" ");
+    }
+  }
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
 void module_terminal_global_print_uint8(const uint8_t i)
 {
   module_terminal_print_uint8(i, module_terminal_vga_instance);

@@ -4,6 +4,7 @@
 // GCC provides these header files automatically
 // They give us access to useful things like fixed-width types
 #include <stdint.h>
+#include <stdbool.h>
 #include "module_terminal.h"
 #include "module_serial.h"
 #include "module_base.h"
@@ -93,16 +94,17 @@ void kernel_main()
   module_pci_detect_devices();
   module_pci_test();
   module__driver__rtl8139__test();
-  module_terminal_global_print_c_string("Press any key to send NIC data...");
-  module_keyboard_wait_keypress();
+//  module_terminal_global_print_c_string("Press any key to send NIC data...");
+//  module_keyboard_wait_keypress();
   module__network__test2();
 //  test_cpp();
 
 // -------------------------------------------------------------------------- //
   // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core to 100%
-//  while(1)
-//  {
-//  }
+  while(true)
+  {
+    module__network__queue__process();
+  }
 
   module_terminal_global_print_c_string("Press any key to end the kernel...");
   module_keyboard_wait_keypress();
