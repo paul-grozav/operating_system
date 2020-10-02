@@ -93,7 +93,8 @@ void kernel_main()
 //  module_video_test();
   module_pci_detect_devices();
   module_pci_test();
-  module__driver__rtl8139__test();
+  module__network__init_ethernet_interfaces();
+//  module__driver__rtl8139__test();
 //  module_terminal_global_print_c_string("Press any key to send NIC data...");
 //  module_keyboard_wait_keypress();
   module__network__test2();
@@ -101,21 +102,28 @@ void kernel_main()
 
 // -------------------------------------------------------------------------- //
   // avoid cpu hanging. wait for keyboard input -- uses 1 CPU core to 100%
-  while(true)
-  {
-    module__network__queue__process();
-  }
+//  while(true)
+//  {
+//    module__network__queue__process();
+//  }
 
   module_terminal_global_print_c_string("Press any key to end the kernel...");
   module_keyboard_wait_keypress();
   module_terminal_global_print_c_string("\n");
+
+  module_terminal_global_print_c_string("Freeing Ethernet interfaces list"
+    " ...\n");
+  module__network__free_ethernet_interfaces();
+  module_terminal_global_print_c_string("Done freeing Ethernet interfaces"
+    " list.\n");
 
   module_terminal_global_print_c_string("Freeing PCI devices list ...\n");
   module_pci_free_devices();
   module_terminal_global_print_c_string("Done freeing PCI devices list.\n");
 
   module_terminal_global_print_c_string("\n-------------\n");
-  module_terminal_global_print_c_string("Kernel ended. B`bye!");
+  module_terminal_global_print_c_string("Kernel ended. B`bye!\n");
+  module_terminal_global_print_c_string("You can stop your machine now.");
 }
 // -------------------------------------------------------------------------- //
 // Junk follows

@@ -117,6 +117,9 @@ typedef struct module_pci_struct_device_info
    */
   uint32_t bar_0;
 
+  /**
+   * Pointer to the next PCI device. This creates a linked list of PCI devices.
+   */
   struct module_pci_struct_device_info * next_device;
 } module_pci_device_info;
 // -------------------------------------------------------------------------- //

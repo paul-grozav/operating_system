@@ -1,0 +1,18 @@
+project(test)
+add_executable(bin
+  src/kernel.c
+  src/module_base.c
+  src/module__driver__rtl8139.c
+  src/module_heap.c
+  src/module_interrupt.c
+  src/module_kernel.c
+  src/module_keyboard.c
+  src/module__network.c
+  src/module__network__data.c
+  src/module_pci.c
+  src/module_serial.c
+  src/module_terminal.c
+  src/module_video.c
+  src/module_video_font.c
+  src/module_video_mode.c
+)

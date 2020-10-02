@@ -403,9 +403,9 @@ void module_pci_test()
     // Move to next device
     i = i->next_device;
   }
-  while(i->next_device != NULL);
+  while(i != NULL);
   // Print last device, that has next = NULL
-  module_pci_print_device_info(i);
+//  module_pci_print_device_info(i);
 }
 // -------------------------------------------------------------------------- //
 

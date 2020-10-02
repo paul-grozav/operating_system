@@ -122,7 +122,8 @@ void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
   }
 }
 // -------------------------------------------------------------------------- //
-void module_terminal_print_buffer_hex_bytes2(const uint8_t * const base, const size_t count)
+void module_terminal_print_buffer_hex_bytes(const uint8_t * const base,
+  const size_t count)
 {
   char buffer[20+1];
   size_t l = 0;

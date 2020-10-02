@@ -60,7 +60,7 @@ static uint8_t rx_empty()
 // -------------------------------------------------------------------------- //
 #define ETH_MTU 1536
 void module__driver__rtl8139__send_packet(
-  const module__network__packet * const p)
+  const module__network__data__packet * const p)
 {
   if(!(p->length > 0 && p->length < ETH_MTU))
   {
@@ -224,13 +224,13 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
         return;
       }
 
-      module__network__packet * pk = NULL;
+      module__network__data__packet * pk = NULL;
 //      uint32_t pk_buffer = (uint32_t)(rx_buffer) + rx_index + 4;
       if ((flags & 1) == 0)
       {
         module_terminal_global_print_c_string("Got a bad packet.\n");
       } else {
-        pk = (module__network__packet*)malloc(sizeof(module__network__packet)
+        pk = (module__network__data__packet*)malloc(sizeof(module__network__data__packet)
           + length);
         if(pk == NULL)
         {
@@ -258,14 +258,13 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 //  module_interrupt_enable(); // needed?
 }
 // -------------------------------------------------------------------------- //
-void module__driver__rtl8139__test()
+void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
+  const uint8_t function,
+  module__network__data__mac_address * const mac_address)
 {
   module_terminal_global_print_c_string("===- Network test -===\n");
 
-  // address of network card
-  uint8_t bus = 0;
-  uint8_t slot = 3;
-  uint8_t function = 0;
+  // PCI address of network card: bus, slot, function
 
   // step 1 - enable PCI Bus Mastering
   {
@@ -292,14 +291,14 @@ void module__driver__rtl8139__test()
   // you can run setting a given MAC using:
   // ~>docker exec -it os bash /mnt/run.sh && qemu-system-i386 -cdrom ~/data/h313/network/docker/research/os/build_machine/fs/project/build/bootable.iso -boot d -netdev user,id=mynet0 -device rtl8139,netdev=mynet0,mac=00:01:02:13:14:fa
   module_terminal_global_print_c_string("MAC address = ");
-  module__network__mac_address ma;
+//  module__network__data__mac_address ma;
   {
     for (uint8_t i=0; i<6; i++)
     {
       uint8_t mac_byte = module_kernel_in_8(iobase + i);
-      ma.data[i] = mac_byte;
+      mac_address->data[i] = mac_byte;
     }
-    module__network__print_mac(&ma);
+    module__network__print_mac(mac_address);
   }
   module_terminal_global_print_c_string(" .\n");
 
