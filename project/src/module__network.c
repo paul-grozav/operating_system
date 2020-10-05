@@ -23,8 +23,6 @@
 // -------------------------------------------------------------------------- //
 // https://www.browserling.com/tools/ip-to-dec
 const uint32_t my_ip = 167772687; // 10.0.2.15
-static const module__network__data__mac_address my_mac =
-  {{0x00, 0x01, 0x02, 0x13, 0x14, 0xfa}};
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
@@ -187,11 +185,12 @@ module__network__data__ip__tcp_header * tcp_hdr(
 // -------------------------------------------------------------------------- //
 // ARP Packet
 // -------------------------------------------------------------------------- //
-void arp_query(module__network__data__packet * request, uint32_t address)
+void arp_query(module__network__data__packet * request, uint32_t address,
+  const module__network__ethernet_interface * const interface)
 {
   module__network__data__ethernet_header * eth = eth_hdr(request);
   eth->destination_mac = module__network__data__mac_address__broadcast_mac;
-  eth->source_mac = my_mac;
+  eth->source_mac = interface->mac_address;
   eth->ethertype = htons(module__network__data__ethernet_header_type__arp);
 
   module__network__data__arp_header * r_arp = arp_hdr(request);
@@ -201,7 +200,7 @@ void arp_query(module__network__data__packet * request, uint32_t address)
   r_arp->proto_size = 4;
   r_arp->operation_type =
     htons(module__network__data__ethernet__arp_operation_type__request);
-  r_arp->sender_mac = my_mac;
+  r_arp->sender_mac = interface->mac_address;
   r_arp->sender_ip = htonl(my_ip);
   r_arp->target_mac = module__network__data__mac_address__zero_mac;
   r_arp->target_ip = htonl(address);
@@ -253,13 +252,14 @@ void print_arp_header(const module__network__data__arp_header * const h)
 }
 // -------------------------------------------------------------------------- //
 void arp_reply(module__network__data__packet * response,
-  const module__network__data__packet * const request)
+  const module__network__data__packet * const request,
+  const module__network__ethernet_interface * const interface)
 {
   module__network__data__ethernet_header * eth = eth_hdr(response);
   const module__network__data__arp_header * const s_arp = arp_hdr(request);
   module__network__data__arp_header * r_arp = arp_hdr(response);
 
-  eth->source_mac = my_mac;
+  eth->source_mac = interface->mac_address;
   eth->destination_mac = s_arp->sender_mac;
   eth->ethertype = htons(module__network__data__ethernet_header_type__arp);
 
@@ -269,7 +269,7 @@ void arp_reply(module__network__data__packet * response,
   r_arp->proto_size = 4;
   r_arp->operation_type =
     htons(module__network__data__ethernet__arp_operation_type__response);
-  r_arp->sender_mac = my_mac;
+  r_arp->sender_mac = interface->mac_address;
   r_arp->sender_ip = htonl(my_ip);
   r_arp->target_mac = s_arp->sender_mac;
   r_arp->target_ip = s_arp->sender_ip;
@@ -309,7 +309,7 @@ void process_arp_packet(const module__network__data__packet * const p,
   {
     module_terminal_global_print_c_string("Replying to ARP\n");
     module__network__data__packet *response_packet = new_pk();
-    arp_reply(response_packet, p);
+    arp_reply(response_packet, p, interface);
     module_terminal_print_buffer_hex_bytes(response_packet->buffer,
       response_packet->length);
     module__network__ethernet_interface__send_packet(response_packet,
@@ -444,10 +444,10 @@ void print_ip_tcp_header(const module__network__data__ip__tcp_header * const h)
 void make_ip_tcp_packet(module__network__data__packet *p,
   const uint32_t destination_ip, const uint16_t destination_port,
   const uint16_t source_port, const int flags, const void * const data,
-  const size_t len)
+  const size_t len, const module__network__ethernet_interface * const interface)
 {
   module__network__data__ethernet_header *eth = eth_hdr(p);
-  eth->source_mac = my_mac;
+  eth->source_mac = interface->mac_address;
 
   static const module__network__data__mac_address dest_mac =
     {{0x52, 0x55, 0x0a, 0x0, 0x02, 0x02}};
@@ -559,10 +559,11 @@ void module__network__ip_checksum(module__network__data__packet *p)
 // -------------------------------------------------------------------------- //
 void make_ip_packet(module__network__data__packet *p,
   const module__network__data__mac_address dest_mac,
-  const uint32_t destination_ip, const void * const data, const size_t len)
+  const uint32_t destination_ip, const void * const data, const size_t len,
+  const module__network__ethernet_interface * const interface)
 {
   module__network__data__ethernet_header *eth = eth_hdr(p);
-  eth->source_mac = my_mac;
+  eth->source_mac = interface->mac_address;
 
   eth->destination_mac = dest_mac;
   eth->ethertype = htons(module__network__data__ethernet_header_type__ip);
