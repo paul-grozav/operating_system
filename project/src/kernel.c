@@ -14,6 +14,7 @@
 #include "module_keyboard.h"
 #include "module_pci.h"
 #include "module__network.h"
+#include "module__network__ethernet_interface.h"
 #include "module__driver__rtl8139.h"
 //#include "test.hpp"
 // -------------------------------------------------------------------------- //
@@ -93,7 +94,7 @@ void kernel_main()
 //  module_video_test();
   module_pci_detect_devices();
   module_pci_test();
-  module__network__init_ethernet_interfaces();
+  module__network__ethernet_interface_init_all();
 //  module__driver__rtl8139__test();
 //  module_terminal_global_print_c_string("Press any key to send NIC data...");
 //  module_keyboard_wait_keypress();
@@ -113,9 +114,13 @@ void kernel_main()
 
   module_terminal_global_print_c_string("Freeing Ethernet interfaces list"
     " ...\n");
-  module__network__free_ethernet_interfaces();
+  module__network__ethernet_interface_free_all();
   module_terminal_global_print_c_string("Done freeing Ethernet interfaces"
     " list.\n");
+
+  module_terminal_global_print_c_string("Freeing RTL8139 drivers list ...\n");
+  module__driver__rtl8139__driver_free_all();
+  module_terminal_global_print_c_string("Done freeing RTL8139 drivers list.\n");
 
   module_terminal_global_print_c_string("Freeing PCI devices list ...\n");
   module_pci_free_devices();

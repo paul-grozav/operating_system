@@ -8,6 +8,7 @@ add_executable(bin
   src/module_kernel.c
   src/module_keyboard.c
   src/module__network.c
+  src/module__network__ethernet_interface.c
   src/module__network__data.c
   src/module_pci.c
   src/module_serial.c

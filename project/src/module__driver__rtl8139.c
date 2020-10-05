@@ -10,12 +10,7 @@
 #include "module__network.h"
 #include "module__driver__rtl8139.h"
 // -------------------------------------------------------------------------- //
-uint16_t iobase = 99;
-//module_heap_heap_bm nic_heap;
-uint8_t *rx_buffer = NULL;
-size_t rx_index = 0;
-size_t rx_buff_size = 8192 + 16 + 1500; // 8*1024 + 16
-uint32_t tx_slot = 0;
+module__driver__rtl8139__instance * module__driver__rtl8139__instances = NULL;
 // -------------------------------------------------------------------------- //
 #define MASTER_DATA 0x21
 #define SLAVE_DATA 0xA1
@@ -53,14 +48,10 @@ static inline uintptr_t round_up(uintptr_t val, uintptr_t place)
   return round_down(val + place - 1, place);
 }
 // -------------------------------------------------------------------------- //
-static uint8_t rx_empty()
-{
-  return (module_kernel_in_8(iobase + 0x37) & 1) != 0;
-}
-// -------------------------------------------------------------------------- //
 #define ETH_MTU 1536
 void module__driver__rtl8139__send_packet(
-  const module__network__data__packet * const p)
+  const module__network__data__packet * const p,
+  module__driver__rtl8139__instance * driver)
 {
   if(!(p->length > 0 && p->length < ETH_MTU))
   {
@@ -78,17 +69,17 @@ void module__driver__rtl8139__send_packet(
 //  module_terminal_global_print_c_string("tx_slot=");
 //  module_terminal_global_print_uint64(tx_slot);
 //  module_terminal_global_print_c_string("\n");
-  uint16_t tx_addr_off = 0x20 + (tx_slot - 1) * 4;
+  uint16_t tx_addr_off = 0x20 + (driver->tx_slot - 1) * 4;
 //  module_terminal_global_print_c_string("tx_addr_off=");
 //  module_terminal_global_print_hex_uint64(tx_addr_off);
 //  module_terminal_global_print_c_string("\n");
-  uint16_t ctrl_reg_off = 0x10 + (tx_slot - 1) * 4;
+  uint16_t ctrl_reg_off = 0x10 + (driver->tx_slot - 1) * 4;
 //  module_terminal_global_print_c_string("ctrl_reg_off=");
 //  module_terminal_global_print_hex_uint64(ctrl_reg_off);
 //  module_terminal_global_print_c_string("\n");
 
-  module_kernel_out_32(iobase + tx_addr_off, (uint32_t)(p->buffer));
-  module_kernel_out_32(iobase + ctrl_reg_off, p->length);
+  module_kernel_out_32(driver->iobase + tx_addr_off, (uint32_t)(p->buffer));
+  module_kernel_out_32(driver->iobase + ctrl_reg_off, p->length);
 
   // TODO: could let this happen async and just make sure the descriptor
   // is done when we loop back around to it.
@@ -101,20 +92,20 @@ void module__driver__rtl8139__send_packet(
   conf = 0b1000000000000000;
 //  conf = 0x400;
   uint32_t x = 0;
-  x = module_kernel_in_32(iobase + ctrl_reg_off);
+  x = module_kernel_in_32(driver->iobase + ctrl_reg_off);
   while ( !(x & take) )
   {
     // await device taking packet
-    x = module_kernel_in_32(iobase + ctrl_reg_off);
+    x = module_kernel_in_32(driver->iobase + ctrl_reg_off);
   }
 //  module_terminal_global_print_c_string("x=");
 //  module_terminal_global_print_binary_uint64(x);
 //  module_terminal_global_print_c_string("\n");
-  x = module_kernel_in_32(iobase + ctrl_reg_off);
+  x = module_kernel_in_32(driver->iobase + ctrl_reg_off);
   while ( !(x & conf) )
   {
     // await send confirmation
-    x = module_kernel_in_32(iobase + ctrl_reg_off);
+    x = module_kernel_in_32(driver->iobase + ctrl_reg_off);
   }
   // gets out with 000 ... 1010 0000 0011 1000
 //  module_terminal_global_print_c_string("x=");
@@ -124,8 +115,8 @@ void module__driver__rtl8139__send_packet(
   // rtl8139 has 4 sending buffers see:
   // https://wiki.osdev.org/RTL8139#Transmitting_Packets
   // slots are 1, 2, 3, 4 - MUST be used in sequence
-  tx_slot %= 4;
-  tx_slot += 1;
+  driver->tx_slot %= 4;
+  driver->tx_slot += 1;
 }
 // -------------------------------------------------------------------------- //
 #define RX_OK 0x01
@@ -149,43 +140,63 @@ void module__driver__rtl8139__send_packet(
 #define RX_PHYSICAL 0x4000
 #define RX_MULTICAST 0x8000
 #define TX_STATUS 0x10
-void module_network_interrupt_handler(module_interrupt_registers_t x)
+// -------------------------------------------------------------------------- //
+void module__driver__rtl8139__generic_interrupt_handler(
+  module_interrupt_registers_t x)
 {
   (void)x; // avoid unused param
-  uint16_t interrupt_flag = module_kernel_in_16(iobase + 0x3e);
-//  module_terminal_global_print_c_string("NIC IRQ flag=");
-//  module_terminal_global_print_binary_uint64(interrupt_flag);
-//  module_terminal_global_print_c_string("\n");
-  if (interrupt_flag == 0)
+
+  // iterate to last in list
+  module__driver__rtl8139__instance * i = module__driver__rtl8139__instances;
+  do
   {
-    module_terminal_global_print_c_string("This card did not interrupt,"
-      " nothing to do.\n");
-    return;
+    // check if interrupt is for this instance / driver
+    uint16_t interrupt_flags = module_kernel_in_16(i->iobase + 0x3e);
+//    module_terminal_global_print_c_string("NIC IRQ flag=");
+//    module_terminal_global_print_binary_uint64(interrupt_flag);
+//    module_terminal_global_print_c_string("\n");
+    if (interrupt_flags != 0)
+    {
+      module__driver__rtl8139__interrupt_handler(i, interrupt_flags);
+      return;
+    }
+//    else
+//    {
+//      module_terminal_global_print_c_string("This card did not interrupt,"
+//        " nothing to do.\n");
+//    }
+    i= i->next_driver;
   }
-
-
-  if (interrupt_flag & RX_OK)
+  while(i != NULL);
+  module_terminal_global_print_c_string("ERROR: Couldn't find the RTL8139 card"
+    " for which we had an interrupt.\n");
+}
+// -------------------------------------------------------------------------- //
+void module__driver__rtl8139__interrupt_handler(
+  module__driver__rtl8139__instance * driver, const uint16_t flags)
+{
+  if (flags & RX_OK)
   {
     module_terminal_global_print_c_string("Packet received.\n");
   }
-  if (interrupt_flag & RX_ERR)
+  if (flags & RX_ERR)
   {
     module_terminal_global_print_c_string("Packet receive error.\n");
   }
-  if (interrupt_flag & TX_ERR)
+  if (flags & TX_ERR)
   {
     module_terminal_global_print_c_string("Packet sending error.\n");
   }
-  if (interrupt_flag & TX_OK)
+  if (flags & TX_OK)
   {
     module_terminal_global_print_c_string("Packet sent.\n");
-    module_kernel_in_32(iobase + TX_STATUS + (tx_slot-1) * 4);
+    module_kernel_in_32(driver->iobase + TX_STATUS + (driver->tx_slot-1) * 4);
   }
 
   // Acknowledge the interrupt
-  module_kernel_out_16(iobase + 0x3e, interrupt_flag);
+  module_kernel_out_16(driver->iobase + 0x3e, flags);
 
-  if (!(interrupt_flag & 1))
+  if (!(flags & 1))
   {
     module_terminal_global_print_c_string("This card interrupted, but there is"
       " no incoming packet. Ack and out.\n");
@@ -194,8 +205,8 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
     return;
   }
 
-  while(! rx_empty())
-  {
+  while((module_kernel_in_8(driver->iobase + 0x37) & 1) == 0)
+  { // while RX NOT empty
     module_terminal_global_print_c_string("This card interrupted, and there is"
       " a packet. Processing it ...\n");
     {
@@ -203,7 +214,7 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 //      module_terminal_global_print_uint64(rx_index);
 //      module_terminal_global_print_c_string("\n");
       const uint16_t * const packet_header = (const uint16_t * const)(
-        rx_buffer + rx_index);
+        driver->rx_buffer + driver->rx_index);
       const uint16_t flags = packet_header[0];
       const uint16_t length = packet_header[1];
 //      module_terminal_global_print_c_string("PP.flags=");
@@ -229,9 +240,11 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
       if ((flags & 1) == 0)
       {
         module_terminal_global_print_c_string("Got a bad packet.\n");
-      } else {
-        pk = (module__network__data__packet*)malloc(sizeof(module__network__data__packet)
-          + length);
+      }
+      else
+      {
+        pk = (module__network__data__packet*)malloc(
+          sizeof(module__network__data__packet) + length);
         if(pk == NULL)
         {
           module_terminal_global_print_c_string("NIC packet alloc is NULL!\n");
@@ -242,14 +255,15 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 //        print_hex_bytes2(rx_buffer + rx_index + 4, length);
 //        module_terminal_global_print_c_string("---PACKET_END---\n");
         // +4 to skip packet header read above ( 2*16bit ints = 4 bytes )
-        module_kernel_memcpy(rx_buffer + rx_index + 4, pk->buffer, pk->length);
+        module_kernel_memcpy(driver->rx_buffer + driver->rx_index + 4,
+          pk->buffer, pk->length);
       }
-      module__network__process_ethernet_packet(pk);
+      module__network__process_ethernet_packet(pk, driver->ethernet_interface);
       // end
       free(pk);
-      rx_index += round_up(length + 4, 4);
-      rx_index %= 8192;
-      module_kernel_out_16(iobase + 0x38, rx_index - 16);
+      driver->rx_index += round_up(length + 4, 4);
+      driver->rx_index %= 8192;
+      module_kernel_out_16(driver->iobase + 0x38, driver->rx_index - 16);
     }
   }
 
@@ -258,12 +272,46 @@ void module_network_interrupt_handler(module_interrupt_registers_t x)
 //  module_interrupt_enable(); // needed?
 }
 // -------------------------------------------------------------------------- //
-void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
-  const uint8_t function,
-  module__network__data__mac_address * const mac_address)
+void module__driver__rtl8139__global_list_add_driver(
+  module__driver__rtl8139__instance * driver)
 {
-  module_terminal_global_print_c_string("===- Network test -===\n");
+  if(module__driver__rtl8139__instances == NULL)
+  {
+    module__driver__rtl8139__instances = driver;
+    return;
+  }
 
+  // iterate to last in list
+  module__driver__rtl8139__instance * i = module__driver__rtl8139__instances;
+  do
+  {
+    i = i->next_driver;
+  }
+  while(i->next_driver != NULL);
+  // append after last
+  i->next_driver = driver;
+}
+// -------------------------------------------------------------------------- //
+void module__driver__rtl8139__driver_init(const uint8_t bus, const uint8_t slot,
+  const uint8_t function,
+  module__network__data__mac_address * const mac_address, void ** driver_ptr,
+  void * ethernet_interface)
+{
+  *driver_ptr = malloc(sizeof(module__driver__rtl8139__instance));
+  module__driver__rtl8139__instance * driver =
+    (module__driver__rtl8139__instance *)(*driver_ptr);
+  // set struct default values
+  driver->iobase = 99;
+  driver->rx_buff_size = 8192 + 16 + 1500; // 8*1024 + 16
+  driver->rx_buffer = NULL;
+  driver->rx_index = 0;
+  driver->tx_slot = 0;
+  driver->ethernet_interface = ethernet_interface;
+  driver->next_driver = NULL;
+  module_terminal_global_print_c_string("Driver instance = ");
+  module_terminal_global_print_hex_uint64((uint64_t)(driver));
+  module_terminal_global_print_c_string("\n");
+  module__driver__rtl8139__global_list_add_driver(driver);
   // PCI address of network card: bus, slot, function
 
   // step 1 - enable PCI Bus Mastering
@@ -277,14 +325,18 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
 
   // step 2 - get iobase
   {
-    iobase = module_pci_config_read(bus, slot, function, 0x10) & ~1;
+    driver->iobase = //(uint16_t)(
+      module_pci_config_read(bus, slot, function, 0x10) & //(uint32_t)(
+        ~1
+//     ))
+    ;
   }
   module_terminal_global_print_c_string("NET IO base=");
-  module_terminal_global_print_uint64(iobase);
+  module_terminal_global_print_uint64(driver->iobase);
   module_terminal_global_print_c_string(" = ");
-  module_terminal_global_print_hex_uint64(iobase);
+  module_terminal_global_print_hex_uint64(driver->iobase);
   module_terminal_global_print_c_string(" = ");
-  module_terminal_global_print_binary_uint64(iobase);
+  module_terminal_global_print_binary_uint64(driver->iobase);
   module_terminal_global_print_c_string("\n");
 
   // step 4 - get MAC address
@@ -295,7 +347,7 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
   {
     for (uint8_t i=0; i<6; i++)
     {
-      uint8_t mac_byte = module_kernel_in_8(iobase + i);
+      uint8_t mac_byte = module_kernel_in_8(driver->iobase + i);
       mac_address->data[i] = mac_byte;
     }
     module__network__print_mac(mac_address);
@@ -306,7 +358,7 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
   module_terminal_global_print_c_string("Powering on the Network device ...\n");
   {
     // Send 0x00 to the CONFIG_1 register (0x52) to set the LWAKE + LWPTN to active high. this should essentially *power on* the device.
-    module_kernel_out_8(iobase + 0x52, 0);
+    module_kernel_out_8(driver->iobase + 0x52, 0);
   }
   module_terminal_global_print_c_string("Network device powered on.\n");
 
@@ -316,10 +368,10 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
     //Next, we should do a software reset to clear the RX and TX buffers and set everything back to defaults. Do this to eliminate the possibility of there still being garbage left in the buffers or registers on power on.
     // Sending 0x10 to the Command register (0x37) will send the RTL8139 into a software reset. Once that byte is sent, the RST bit must be checked to make sure that the chip has finished the reset. If the RST bit is high (1), then the reset is still in operation.
     // NB: There is a minor bug in Qemu. If you check the command register before performing a soft reset, you may find the RST bit is high (1). Just ignore it and carry on with the initialization procedure.
-    if( (module_kernel_in_8(iobase + 0x37) & 0x10) == 0 )
+    if( (module_kernel_in_8(driver->iobase + 0x37) & 0x10) == 0 )
     {
-      module_kernel_out_8(iobase + 0x37, 0x10); // reset
-      while (module_kernel_in_8(iobase + 0x37) & 0x10)
+      module_kernel_out_8(driver->iobase + 0x37, 0x10); // reset
+      while (module_kernel_in_8(driver->iobase + 0x37) & 0x10)
       {
         // await reset
       }
@@ -332,21 +384,22 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
   {
 //    module_heap_init(&nic_heap);
 //    module_heap_add_block(&nic_heap, 0x110000, 1024*1024, 16);
-    rx_buffer = (uint8_t*)malloc(rx_buff_size);
-    if(rx_buffer == 0)
+    driver->rx_buffer = (uint8_t*)malloc(driver->rx_buff_size);
+    if(driver->rx_buffer == 0)
     {
       module_terminal_global_print_c_string("NIC rx_buffer= NULL !!!");
+      // free stuff and return error TODO !!!
     }
-    module_kernel_memset(rx_buffer, 0, rx_buff_size);
+    module_kernel_memset(driver->rx_buffer, 0, driver->rx_buff_size);
 //    print_hex_bytes(rx_buffer, 64);//rx_buff_size);
     // For this part, we will send the chip a memory location to use as its receive buffer start location. One way to do it, would be to define a buffer variable and send that variables memory location to the RBSTART register (0x30).
     // Note that 'rx_buffer' needs to be a pointer to a "physical address". In this case a size of 8192 + 16 (8K + 16 bytes) is recommended, see below.
-    module_kernel_out_32(iobase + 0x30, (uint32_t)(rx_buffer)); // send uint32_t memory location to RBSTART (0x30)
-    module_kernel_out_32(iobase + 0x38, 0); // buffer pointer
-    module_kernel_out_32(iobase + 0x3a, 0); // buffer address
+    module_kernel_out_32(driver->iobase + 0x30, (uint32_t)(driver->rx_buffer)); // send uint32_t memory location to RBSTART (0x30)
+    module_kernel_out_32(driver->iobase + 0x38, 0); // buffer pointer
+    module_kernel_out_32(driver->iobase + 0x3a, 0); // buffer address
   }
   module_terminal_global_print_c_string("NIC rx_buffer=");
-  module_terminal_global_print_uint64((uint64_t)((uint32_t)((uint8_t*)(rx_buffer))));
+  module_terminal_global_print_uint64((uint64_t)((uint32_t)((uint8_t*)(driver->rx_buffer))));
   module_terminal_global_print_c_string("\n");
   module_terminal_global_print_c_string("NIC RX buff initialized.\n");
 
@@ -354,21 +407,21 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
   module_terminal_global_print_c_string("NIC enable RX & TX ...\n");
   {
     // 0x3c = Interrupt Mask Register
-    module_kernel_out_16(iobase + 0x3c, (RX_OK | TX_OK | TX_ERR));
-    module_kernel_out_32(iobase + 0x40, 0x600); // send larger DMA bursts
+    module_kernel_out_16(driver->iobase + 0x3c, (RX_OK | TX_OK | TX_ERR));
+    module_kernel_out_32(driver->iobase + 0x40, 0x600); // send larger DMA bursts
     // 0x44 = Receive Config Register
-    module_kernel_out_32(iobase + 0x44, 0x68f);
+    module_kernel_out_32(driver->iobase + 0x44, 0x68f);
 //      (RCR_AAP | RCR_APM | RCR_AM | RCR_AB | RCR_WRAP)); // accept all packets + unlimited DMA
 //    module_kernel_out_32(iobase + 0x4c, 0x0); // RX_MISSED
-    module_kernel_out_8(iobase + 0x37, 0x0c); // enable rx and tx bits high
+    module_kernel_out_8(driver->iobase + 0x37, 0x0c); // enable rx and tx bits high
   }
-  tx_slot = 1;
+  driver->tx_slot = 1;
   module_terminal_global_print_c_string("NIC enabled RX & TX.\n");
 
 
   // step 3 - set IRQ handler
   {
-    uint32_t irq = module_pci_config_read(bus, slot, function, 0x3c) &0xff;
+    uint8_t irq = module_pci_config_read(bus, slot, function, 0x3c) &0xff;
     module_terminal_global_print_c_string("Read IRQ=");
     module_terminal_global_print_uint64(irq);
     module_terminal_global_print_c_string("\n");
@@ -379,7 +432,7 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
     // https://github.com/narke/Aragveli/blob/master/src/extra/drivers/rtl8139.c
     irq += 32; // 43 is actually triggered instead of 11
     module_interrupt_register_interrupt_handler(irq,
-      module_network_interrupt_handler);
+      module__driver__rtl8139__generic_interrupt_handler);
     module_interrupt_enable_irq(irq);
   }
 
@@ -392,6 +445,30 @@ void module__driver__rtl8139__init_device(const uint8_t bus, const uint8_t slot,
 //  module_terminal_global_print_c_string("NIC RX buff free ...\n");
 //  module_heap_free(&nic_heap, rx_buffer);
 //  module_terminal_global_print_c_string("NIC RX buff freed.\n");
+}
+// -------------------------------------------------------------------------- //
+void module__driver__rtl8139__driver_free(
+  module__driver__rtl8139__instance * driver)
+{
+  free(driver->rx_buffer);
+  module_kernel_memset(driver->rx_buffer, 0, driver->rx_buff_size);
+
+  free(driver);
+  module_kernel_memset(driver, 0, sizeof(module__driver__rtl8139__instance));
+}
+// -------------------------------------------------------------------------- //
+void module__driver__rtl8139__driver_free_all()
+{
+  // iterate to last in list
+  module__driver__rtl8139__instance * i = module__driver__rtl8139__instances;
+  module__driver__rtl8139__instance * next = NULL;
+  do
+  {
+    next = i->next_driver;
+    module__driver__rtl8139__driver_free(i);
+    i = next;
+  }
+  while(i != NULL);
 }
 // -------------------------------------------------------------------------- //
 
