@@ -4,7 +4,7 @@
 #include "module_kernel.h"
 #include "module_base.h"
 #include "module_terminal.h"
-#include "module_pci.h"
+#include "module__pci.h"
 #include "module_heap.h"
 #include "module_interrupt.h"
 #include "module__network.h"
@@ -318,15 +318,15 @@ void module__driver__rtl8139__driver_init(const uint8_t bus, const uint8_t slot,
   {
     // First, you need to enable PCI Bus Mastering for this device. This allows the NIC to perform DMA. To do it, you can read the Command Register from the device's PCI Configuration Space, set bit 2 (bus mastering bit) and write the modified Command Register. Note this Command Register is that of the PCI Configuration Space and has nothing to do with the Command Register that will be evoked in the following sections: the latter is specific to the RTL8139, whereas every PCI device (not only NICs) have a PCI Configuration Space with a Command Register.
     // Some BIOS may enable Bus Mastering at startup, but some versions of qemu don't. You should thus be careful about this step.
-    uint32_t state = module_pci_config_read(bus, slot, function, 4);
+    uint32_t state = module__pci__config_read(bus, slot, function, 4);
     state |= 0x04;
-    module_pci_config_write(bus, slot, function, 4, state);
+    module__pci__config_write(bus, slot, function, 4, state);
   }
 
   // step 2 - get iobase
   {
     driver->iobase = //(uint16_t)(
-      module_pci_config_read(bus, slot, function, 0x10) & //(uint32_t)(
+      module__pci__config_read(bus, slot, function, 0x10) & //(uint32_t)(
         ~1
 //     ))
     ;
@@ -421,7 +421,7 @@ void module__driver__rtl8139__driver_init(const uint8_t bus, const uint8_t slot,
 
   // step 3 - set IRQ handler
   {
-    uint8_t irq = module_pci_config_read(bus, slot, function, 0x3c) &0xff;
+    uint8_t irq = module__pci__config_read(bus, slot, function, 0x3c) &0xff;
     module_terminal_global_print_c_string("Read IRQ=");
     module_terminal_global_print_uint64(irq);
     module_terminal_global_print_c_string("\n");
@@ -450,6 +450,9 @@ void module__driver__rtl8139__driver_init(const uint8_t bus, const uint8_t slot,
 void module__driver__rtl8139__driver_free(
   module__driver__rtl8139__instance * driver)
 {
+  module_terminal_global_print_c_string("Freeing RTL8139 dirver=");
+  module_terminal_global_print_hex_uint64((uint32_t)(driver));
+  module_terminal_global_print_c_string(" done.\n");
   free(driver->rx_buffer);
   module_kernel_memset(driver->rx_buffer, 0, driver->rx_buff_size);
 

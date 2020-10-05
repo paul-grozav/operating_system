@@ -6,13 +6,13 @@
 // -------------------------------------------------------------------------- //
 //#include <stdint.h> // uintX
 #include "module__network__data.h"
-#include "module_pci.h"
+#include "module__pci.h"
 // -------------------------------------------------------------------------- //
 //! All fields that describe an ethernet interface.
 typedef struct module__network__struct_ethernet_interface
 {
   //! PCI device info, that is used to talk to this eth interface / hardware
-  const module_pci_device_info * pci_device_info;
+  const module__pci__device_info * pci_device_info;
 
   //! The actual driver used, is based on the vendor and device id in PCI info.
   void * driver;

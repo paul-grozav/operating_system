@@ -14,7 +14,7 @@
 #include "module_kernel.h"
 #include "module_base.h"
 #include "module_terminal.h"
-#include "module_pci.h"
+#include "module__pci.h"
 #include "module_heap.h"
 #include "module_interrupt.h"
 #include "module__network__data.h"

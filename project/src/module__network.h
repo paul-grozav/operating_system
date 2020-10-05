@@ -7,7 +7,7 @@
 #include <stdint.h> // uintX
 #include "module__network__data.h"
 #include "module__network__ethernet_interface.h"
-#include "module_pci.h"
+//#include "module__pci.h"
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
 //! Run short network test

@@ -23,7 +23,7 @@ void module__network__ethernet_interface_init(
 void module__network__ethernet_interface_init_all()
 {
   module_terminal_global_print_c_string("Detecting ethernet interfaces.\n");
-  if(module_pci_devices == NULL)
+  if(module__pci__devices == NULL)
   {
     module_terminal_global_print_c_string("PCI Device List is EMPTY ?!");
     return;
@@ -31,7 +31,7 @@ void module__network__ethernet_interface_init_all()
   // if here, then not empty ...
 
   // iterate to end of list
-  const module_pci_device_info * i = module_pci_devices;
+  const module__pci__device_info * i = module__pci__devices;
   do
   {
     if(
@@ -64,7 +64,7 @@ void module__network__ethernet_interface_init_all()
       {
         module_terminal_global_print_c_string("No network driver for this PCI"
           " ethernet controller:\n");
-        module_pci_print_device_info(i);
+        module__pci__print_device_info(i);
       }
     }
     else

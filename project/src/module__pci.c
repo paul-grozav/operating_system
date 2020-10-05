@@ -9,7 +9,7 @@
 // qemu-system-i386 -cdrom ~/data/h313/network/docker/research/os/
 // build_machine/fs/project/build/bootable.iso -boot d
 // -netdev user,id=mynet0 -device rtl8139,netdev=mynet0
-#include "module_pci.h"
+#include "module__pci.h"
 #include "module_kernel.h"
 #include "module_heap.h"
 #include "module_terminal.h"
@@ -34,7 +34,7 @@
 //#define PCI_BAR4 PCI_BAR3 + 4
 //#define PCI_BAR5 PCI_BAR4 + 4
 // -------------------------------------------------------------------------- //
-uint32_t module_pci_config_read(const uint8_t bus, const uint8_t slot,
+uint32_t module__pci__config_read(const uint8_t bus, const uint8_t slot,
   const uint8_t function, const uint8_t offset)
 {
   uint32_t reg = 0x80000000;
@@ -46,7 +46,7 @@ uint32_t module_pci_config_read(const uint8_t bus, const uint8_t slot,
   return module_kernel_in_32(PCI_DATA);
 }
 // -------------------------------------------------------------------------- //
-void module_pci_config_write(const uint8_t bus, const uint8_t slot,
+void module__pci__config_write(const uint8_t bus, const uint8_t slot,
   const uint8_t function, const uint8_t offset, const uint32_t data)
 {
   uint32_t reg = 0x80000000;
@@ -58,7 +58,7 @@ void module_pci_config_write(const uint8_t bus, const uint8_t slot,
   module_kernel_out_32(PCI_DATA, data);
 }
 // -------------------------------------------------------------------------- //
-void module_pci_device_info_init(module_pci_device_info * const di)
+void module__pci__device_info__init(module__pci__device_info * const di)
 {
   if(di == NULL)
   {
@@ -82,9 +82,9 @@ void module_pci_device_info_init(module_pci_device_info * const di)
   di->next_device = NULL;
 }
 // -------------------------------------------------------------------------- //
-module_pci_device_info * module_pci_devices = NULL;
+module__pci__device_info * module__pci__devices = NULL;
 // -------------------------------------------------------------------------- //
-void module_pci_device_get_class_name(const uint8_t class,
+void module__pci__device_get_class_name(const uint8_t class,
   const uint8_t subclass, char ** class_name, char ** subclass_name)
 {
   // Based on: https://wiki.osdev.org/PCI#Class_Codes
@@ -219,7 +219,7 @@ void module_pci_device_get_class_name(const uint8_t class,
   }
 }
 // -------------------------------------------------------------------------- //
-void module_pci_print_device_info(const module_pci_device_info * const di)
+void module__pci__print_device_info(const module__pci__device_info * const di)
 {
   if(di == NULL)
   {
@@ -228,7 +228,7 @@ void module_pci_print_device_info(const module_pci_device_info * const di)
   }
   char * class_name = NULL;
   char * subclass_name = NULL;
-  module_pci_device_get_class_name(di->class_code, di->subclass_code,
+  module__pci__device_get_class_name(di->class_code, di->subclass_code,
     &class_name, &subclass_name);
 
   module_terminal_global_print_c_string("PCI device list_ptr=");
@@ -280,25 +280,26 @@ void module_pci_print_device_info(const module_pci_device_info * const di)
 }
 // -------------------------------------------------------------------------- //
 // add copy to list
-void module_pci_add_device_copy_to_list(const module_pci_device_info * const di)
+void module__pci__add_device_copy_to_list(
+  const module__pci__device_info * const di)
 {
   // create copy on heap
-  module_pci_device_info * di_node = (module_pci_device_info *)malloc(
-    sizeof(module_pci_device_info));
+  module__pci__device_info * di_node = (module__pci__device_info *)malloc(
+    sizeof(module__pci__device_info));
   *di_node = *di;
   module_terminal_global_print_c_string("Adding PCI device ptr=");
   module_terminal_global_print_hex_uint64((uint32_t)(di_node));
   module_terminal_global_print_c_string(" to list.\n");
 
   // add copy to list
-  if(module_pci_devices == NULL)
+  if(module__pci__devices == NULL)
   {
-    module_pci_devices = di_node;
+    module__pci__devices = di_node;
   }
   else
   {
     // iterate to end of list
-    module_pci_device_info * di_iterator = module_pci_devices;
+    module__pci__device_info * di_iterator = module__pci__devices;
     while(di_iterator->next_device != NULL)
     {
       di_iterator = di_iterator->next_device;
@@ -307,16 +308,16 @@ void module_pci_add_device_copy_to_list(const module_pci_device_info * const di)
   }
 }
 // -------------------------------------------------------------------------- //
-void module_pci_detect_devices()
+void module__pci__detect_devices()
 {
   const uint16_t invalid_vendor_id = 0xffff;
-  module_pci_device_info di;
-  module_pci_device_info_init(&di);
+  module__pci__device_info di;
+  module__pci__device_info__init(&di);
   for (uint8_t bus = 0; ; bus++) // if 255 break at end
   {
     for (uint8_t slot = 0; slot < 32; slot++)
     {
-      uint32_t tmp_o0 = module_pci_config_read(bus, slot, 0, 0);
+      uint32_t tmp_o0 = module__pci__config_read(bus, slot, 0, 0);
       di.vendor_id = tmp_o0 & 0xffff;
       if (di.vendor_id == invalid_vendor_id)
       {
@@ -326,7 +327,7 @@ void module_pci_detect_devices()
       di.slot = slot;
 
       // see https://wiki.osdev.org/PCI#Header_Type_0x00
-      uint32_t tmp_oc = module_pci_config_read(bus, slot, 0, 0xc);
+      uint32_t tmp_oc = module__pci__config_read(bus, slot, 0, 0xc);
       di.cache_line_size = tmp_oc & 0xff;
       di.latency_timer = (tmp_oc >> 8) & 0xff;
       di.header_type = (tmp_oc >> 16) & 0xff;
@@ -338,24 +339,24 @@ void module_pci_detect_devices()
 
       for (uint8_t function = 0; function < no_functions; function++)
       {
-        if ((module_pci_config_read(bus, slot, function, 0) & 0xffff)
+        if ((module__pci__config_read(bus, slot, function, 0) & 0xffff)
           != 0xffff)
         {
           di.function = function;
           di.device_id = (tmp_o0 >> 16) & 0xffff;
 
-          uint32_t tmp_o4 = module_pci_config_read(bus, slot, 0, 4);
+          uint32_t tmp_o4 = module__pci__config_read(bus, slot, 0, 4);
           di.command = tmp_o4 & 0xffff;
           di.status = (tmp_o4 >> 16) & 0xffff;
-          uint32_t tmp_o8 = module_pci_config_read(bus, slot, 0, 8);
+          uint32_t tmp_o8 = module__pci__config_read(bus, slot, 0, 8);
           di.class_code = (tmp_o8 >> 24) & 0xff;
           di.subclass_code = (tmp_o8 >> 16) & 0xff;
           di.prog_if = (tmp_o8 >> 8) & 0xff;
           di.revision_id = tmp_o8 & 0xff;
 
-          di.bar_0 = module_pci_config_read(bus, slot, 0, 0x10);
+          di.bar_0 = module__pci__config_read(bus, slot, 0, 0x10);
 
-          module_pci_add_device_copy_to_list(&di);
+          module__pci__add_device_copy_to_list(&di);
         }
       }
     }
@@ -368,12 +369,12 @@ void module_pci_detect_devices()
   }
 }
 // -------------------------------------------------------------------------- //
-void module_pci_free_devices()
+void module__pci__free_devices()
 {
   // iterate to end of list
-  const module_pci_device_info * i = module_pci_devices;
-  module_pci_devices = NULL;
-  const module_pci_device_info * next = NULL;
+  const module__pci__device_info * i = module__pci__devices;
+  module__pci__devices = NULL;
+  const module__pci__device_info * next = NULL;
   while(i != NULL)
   {
     next = i->next_device;
@@ -386,9 +387,9 @@ void module_pci_free_devices()
   }
 }
 // -------------------------------------------------------------------------- //
-void module_pci_test()
+void module__pci__test()
 {
-  if(module_pci_devices == NULL)
+  if(module__pci__devices == NULL)
   {
     module_terminal_global_print_c_string("PCI Device List is EMPTY ?!");
     return;
@@ -396,10 +397,10 @@ void module_pci_test()
   // if here, then not empty ...
 
   // iterate to end of list
-  const module_pci_device_info * i = module_pci_devices;
+  const module__pci__device_info * i = module__pci__devices;
   do
   {
-    module_pci_print_device_info(i);
+    module__pci__print_device_info(i);
     // Move to next device
     i = i->next_device;
   }

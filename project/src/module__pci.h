@@ -1,13 +1,13 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
-#ifndef MODULE_PCI_H
-#define MODULE_PCI_H
+#ifndef MODULE__PCI__H
+#define MODULE__PCI__H
 // -------------------------------------------------------------------------- //
 #include <stdint.h> // uintX
 // -------------------------------------------------------------------------- //
 //! All fields that describe a PCI device.
-typedef struct module_pci_struct_device_info
+typedef struct module__pci__struct_device_info
 {
   /**
    * Identifies the manufacturer of the device. Where valid IDs are allocated by
@@ -120,25 +120,25 @@ typedef struct module_pci_struct_device_info
   /**
    * Pointer to the next PCI device. This creates a linked list of PCI devices.
    */
-  struct module_pci_struct_device_info * next_device;
-} module_pci_device_info;
+  struct module__pci__struct_device_info * next_device;
+} module__pci__device_info;
 // -------------------------------------------------------------------------- //
 /**
  * Print details about a device.
  * @param[in] di - Pointer to device info structure.
  */
-void module_pci_print_device_info(const module_pci_device_info * const di);
+void module__pci__print_device_info(const module__pci__device_info * const di);
 // -------------------------------------------------------------------------- //
 /**
  * First node in a linked list of PCI device infos.
  */
-extern module_pci_device_info * module_pci_devices;
+extern module__pci__device_info * module__pci__devices;
 // -------------------------------------------------------------------------- //
 /**
  * Initialize with 0 or invalid values all the fields of the given structure.
  * @param[in] di - device info structure to be populated with default values.
  */
-void module_pci_device_info_init(module_pci_device_info * const di);
+void module__pci__device_info__init(module__pci__device_info * const di);
 // -------------------------------------------------------------------------- //
 /**
  * Read 32 bits from the PCI Configuration Space. See
@@ -149,7 +149,7 @@ void module_pci_device_info_init(module_pci_device_info * const di);
  * device.
  * @param[in] offset - offset from where to read the bits/bytes.
  */
-uint32_t module_pci_config_read(const uint8_t bus, const uint8_t slot,
+uint32_t module__pci__config_read(const uint8_t bus, const uint8_t slot,
   const uint8_t function, const uint8_t offset);
 // -------------------------------------------------------------------------- //
 /**
@@ -162,17 +162,17 @@ uint32_t module_pci_config_read(const uint8_t bus, const uint8_t slot,
  * @param[in] offset - offset where to write the bits/bytes.
  * @param[in] data - 32 bits to be written.
  */
-void module_pci_config_write(const uint8_t bus, const uint8_t slot,
+void module__pci__config_write(const uint8_t bus, const uint8_t slot,
   const uint8_t function, const uint8_t offset, const uint32_t data);
 // -------------------------------------------------------------------------- //
 //! Populate global linked list of PCI devices
-void module_pci_detect_devices();
+void module__pci__detect_devices();
 // -------------------------------------------------------------------------- //
 //! Free pointers from global linked list of PCI devices
-void module_pci_free_devices();
+void module__pci__free_devices();
 // -------------------------------------------------------------------------- //
 //! List PCI devices
-void module_pci_test();
+void module__pci__test();
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //
