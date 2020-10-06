@@ -98,7 +98,7 @@ void kernel_main()
 //  module__driver__rtl8139__test();
 //  module_terminal_global_print_c_string("Press any key to send NIC data...");
 //  module_keyboard_wait_keypress();
-  module__network__test2();
+  module__network__test();
 //  test_cpp();
 
 // -------------------------------------------------------------------------- //

@@ -5,6 +5,7 @@
 #define MODULE__NETWORK__DATA_H
 // -------------------------------------------------------------------------- //
 #include <stdint.h> // uintX
+#include <stddef.h> // size_t
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
 typedef struct
@@ -26,6 +27,19 @@ typedef struct
    */
   uint8_t buffer[];
 } module__network__data__packet;
+// -------------------------------------------------------------------------- //
+module__network__data__packet * module__network__data__packet__alloc();
+// -------------------------------------------------------------------------- //
+module__network__data__packet * module__network__data__packet__create_with_data(
+  const char * const data, const size_t length);
+// -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
+// Ethernet header
 // -------------------------------------------------------------------------- //
 //! Enumerates ethernet header types
 enum module__network__data__ethernet_header_type
@@ -70,6 +84,16 @@ typedef struct __attribute__((__packed__))
   uint8_t buffer[];
 } module__network__data__ethernet_header;
 // -------------------------------------------------------------------------- //
+module__network__data__ethernet_header *
+  module__network__data__packet_get_ethernet_header(
+  module__network__data__packet * const p);
+// -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
 // Address Resolution Protocol (ARP) Packet
 // -------------------------------------------------------------------------- //
 /**
@@ -110,6 +134,11 @@ enum module__network__data__ethernet__arp_operation_type
   //! ARP response
   module__network__data__ethernet__arp_operation_type__response = 2
 };
+
+
+
+
+
 // -------------------------------------------------------------------------- //
 // Internet Protocol (IP) Packet
 // -------------------------------------------------------------------------- //
@@ -263,6 +292,11 @@ enum module__network__data__ethernet__ip__protocol_type
   //! User Datagram Protocol
   module__network__data__ethernet__ip__protocol_type__udp = 17
 };
+
+
+
+
+
 // -------------------------------------------------------------------------- //
 // Transmission Control Protocol (TCP) Packet
 // -------------------------------------------------------------------------- //

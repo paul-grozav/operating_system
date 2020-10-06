@@ -19,6 +19,7 @@
 #include "module_interrupt.h"
 #include "module__network__data.h"
 #include "module__network__ethernet_interface.h"
+#include "module__network__service__dhcp__client.h"
 #include "module__driver__rtl8139.h" // recursive?
 // -------------------------------------------------------------------------- //
 // https://www.browserling.com/tools/ip-to-dec
@@ -131,34 +132,6 @@ void module__network__print_ip(const uint32_t ip)
   module_terminal_global_print_uint64( (ip >> 24) & 0xff );
 }
 // -------------------------------------------------------------------------- //
-#define ETH_MTU 1536
-module__network__data__packet * new_pk()
-{
-  const size_t packet_size = sizeof(module__network__data__packet) + ETH_MTU;
-  module__network__data__packet * new_pk = malloc(packet_size);
-  module_kernel_memset(new_pk, 1, packet_size);
-  new_pk->length = -1;
-//  new_pk->from = NULL;
-//  new_pk->refcount = 1;
-  return new_pk;
-}
-// -------------------------------------------------------------------------- //
-module__network__data__packet * new_pk_with_data(const char * const data,
-  const size_t length)
-{
-  const size_t packet_size = sizeof(module__network__data__packet) + length;
-  module__network__data__packet * new_pk = malloc(packet_size);
-  module_kernel_memcpy(data, new_pk->buffer, length);
-  new_pk->length = length;
-  return new_pk;
-}
-// -------------------------------------------------------------------------- //
-module__network__data__ethernet_header * eth_hdr(
-  const module__network__data__packet * const p)
-{
-  return (module__network__data__ethernet_header *)&(p->buffer);
-}
-// -------------------------------------------------------------------------- //
 module__network__data__arp_header * arp_hdr(
   const module__network__data__packet * const p)
 {
@@ -188,7 +161,7 @@ module__network__data__ip__tcp_header * tcp_hdr(
 void arp_query(module__network__data__packet * request, uint32_t address,
   const module__network__ethernet_interface * const interface)
 {
-  module__network__data__ethernet_header * eth = eth_hdr(request);
+  module__network__data__ethernet_header * eth = module__network__data__packet_get_ethernet_header(request);
   eth->destination_mac = module__network__data__mac_address__broadcast_mac;
   eth->source_mac = interface->mac_address;
   eth->ethertype = htons(module__network__data__ethernet_header_type__arp);
@@ -255,7 +228,7 @@ void arp_reply(module__network__data__packet * response,
   const module__network__data__packet * const request,
   const module__network__ethernet_interface * const interface)
 {
-  module__network__data__ethernet_header * eth = eth_hdr(response);
+  module__network__data__ethernet_header * eth = module__network__data__packet_get_ethernet_header(response);
   const module__network__data__arp_header * const s_arp = arp_hdr(request);
   module__network__data__arp_header * r_arp = arp_hdr(response);
 
@@ -308,7 +281,8 @@ void process_arp_packet(const module__network__data__packet * const p,
   )
   {
     module_terminal_global_print_c_string("Replying to ARP\n");
-    module__network__data__packet *response_packet = new_pk();
+    module__network__data__packet *response_packet =
+      module__network__data__packet__alloc();
     arp_reply(response_packet, p, interface);
     module_terminal_print_buffer_hex_bytes(response_packet->buffer,
       response_packet->length);
@@ -446,7 +420,7 @@ void make_ip_tcp_packet(module__network__data__packet *p,
   const uint16_t source_port, const int flags, const void * const data,
   const size_t len, const module__network__ethernet_interface * const interface)
 {
-  module__network__data__ethernet_header *eth = eth_hdr(p);
+  module__network__data__ethernet_header *eth = module__network__data__packet_get_ethernet_header(p);
   eth->source_mac = interface->mac_address;
 
   static const module__network__data__mac_address dest_mac =
@@ -562,7 +536,7 @@ void make_ip_packet(module__network__data__packet *p,
   const uint32_t destination_ip, const void * const data, const size_t len,
   const module__network__ethernet_interface * const interface)
 {
-  module__network__data__ethernet_header *eth = eth_hdr(p);
+  module__network__data__ethernet_header *eth = module__network__data__packet_get_ethernet_header(p);
   eth->source_mac = interface->mac_address;
 
   eth->destination_mac = dest_mac;
@@ -729,7 +703,7 @@ void module__network__process_ethernet_packet(
 {
 //  print_hex_bytes(p->buffer, p->length);//rx_buff_size);
 //  print_hex_bytes(rx_buffer, 64);//rx_buff_size);
-  const module__network__data__ethernet_header * const eth = eth_hdr(p);
+  const module__network__data__ethernet_header * const eth = module__network__data__packet_get_ethernet_header(p);
   print_eth_hdr(eth);
   const uint16_t eth_type = ntohs(eth->ethertype);
   if(eth_type == module__network__data__ethernet_header_type__arp)
@@ -756,7 +730,7 @@ void module__network__process_ethernet_packet(
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
-void module__network__test2()
+void module__network__test()
 {
   module__network__ethernet_interface * i =
     module__network__ethernet_interface__list; // first interface
@@ -778,75 +752,7 @@ void module__network__test2()
 //  }
 
   // DHCP discover - not really needed - but nice to have
-  {
-  module_terminal_global_print_c_string("Sending DHCP discovery\n");
-  module__network__data__packet *p = new_pk_with_data(
-"\xff\xff\xff\xff\xff\xff\x52\x54\x00\x12\x13\x56\x08\x00\x45\x10" \
-"\x01\x48\x00\x00\x00\x00\x80\x11\x39\x96\x00\x00\x00\x00\xff\xff" \
-"\xff\xff\x00\x44\x00\x43\x01\x34\xd3\x9b\x01\x01\x06\x00\x89\xcd" \
-"\xf8\x41\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x52\x54\x00\x12\x13\x56\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-"\x00\x00\x00\x00\x00\x00\x63\x82\x53\x63\x35\x01\x01\x32\x04\x0a" \
-"\x00\x02\x0f\x0c\x06\x64\x65\x62\x69\x61\x6e\x37\x0d\x01\x1c\x02" \
-"\x03\x0f\x06\x77\x0c\x2c\x2f\x1a\x79\x2a\x3d\x13\xff\x00\x12\x13" \
-"\x56\x00\x01\x00\x01\x26\xd1\x38\xdb\x52\x54\x00\x12\x34\x56\xff" \
-"\x00\x00\x00\x00\x00\x00"
-  , 342);
-//  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
-  module__network__ethernet_interface__send_packet(p, i);
-  free(p);
-  }
-//  module_terminal_global_print_c_string("Wait for packet on driver=");
-//  module_terminal_global_print_hex_uint64((uint64_t)(i->driver));
-//  module_terminal_global_print_c_string("\n");
-  while(i->ipq_index == 0){} // wait for packet
-  const module__network__data__packet * const p =
-    module__network__ethernet_interface__get_packet_from_incoming_queue(i);
-  module_terminal_print_buffer_hex_bytes((char*)(p->buffer), 10);//p->length);
-
-  // DHCP request
-//  {
-//  module_terminal_global_print_c_string("Sending DHCP request\n");
-//  module__network__data__packet *p = new_pk_with_data(
-//"\xff\xff\xff\xff\xff\xff\x52\x54\x00\x12\x13\x56\x08\x00\x45\x10" \
-//"\x01\x48\x00\x00\x00\x00\x80\x11\x39\x96\x00\x00\x00\x00\xff\xff" \
-//"\xff\xff\x00\x44\x00\x43\x01\x34\xcb\x59\x01\x01\x06\x00\x89\xcd" \
-//"\xf8\x41\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x52\x54\x00\x12\x13\x56\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
-//"\x00\x00\x00\x00\x00\x00\x63\x82\x53\x63\x35\x01\x03\x36\x04\x0a" \
-//"\x00\x02\x02\x32\x04\x0a\x00\x02\x0f\x0c\x06\x64\x65\x62\x69\x61" \
-//"\x6e\x37\x0d\x01\x1c\x02\x03\x0f\x06\x77\x0c\x2c\x2f\x1a\x79\x2a" \
-//"\x3d\x13\xff\x00\x12\x13\x56\x00\x01\x00\x01\x26\xd1\x38\xdb\x52" \
-//"\x54\x00\x12\x34\x56\xff"
-//  , 342);
-//  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
-//  module__driver__rtl8139__send_packet(p);
-//  free(p);
-//  }
+  module__network__service__dhcp__client__get_net_config(i);
   // end
 //  module_terminal_global_print_c_string("NET TEST END\n");
 //  return;
@@ -900,75 +806,71 @@ void module__network__test2()
 
 
 
-  return;
-  module_terminal_global_print_c_string("Waiting for syn-ack\n");
-  for(size_t i=1; i<99999999; i++)
-  {
-    // waiting
-//    module_terminal_global_print_c_string(".");
-  }
-  {
-  module_terminal_global_print_c_string("TCP Conn ack\n");
-  module__network__data__packet *p = new_pk_with_data(
-"\x52\x55\x0a\x00\x02\x02\x52\x54\x00\x12\x13\x56\x08\x00\x45\x00" \
-"\x00\x28\x5c\x84\x40\x00\x40\x06\xc6\x3b\x0a\x00\x02\x0f\x0a\x00" \
-"\x02\x02\xa3\x84\x04\x06\xdb\x7f\xa4\xf7\x00\x00\xfa\x02\x50\x10" \
-"\xfa\xf0\x7a\xce\x00\x00"
-  , 54);
-//  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
-  module__network__ethernet_interface__send_packet(p, i);
-  free(p);
-  }
-  {
-  module_terminal_global_print_c_string("HTTP req\n");
-  module__network__data__packet *p = new_pk_with_data(
-"\x52\x55\x0a\x00\x02\x02\x52\x54\x00\x12\x13\x56\x08\x00\x45\x00" \
-"\x00\xb4\x5c\x85\x40\x00\x40\x06\xc5\xae\x0a\x00\x02\x0f\x0a\x00" \
-"\x02\x02\xa3\x84\x04\x06\xdb\x7f\xa4\xf7\x00\x00\xfa\x02\x50\x18" \
-"\xfa\xf0\xa9\xc9\x00\x00\x47\x45\x54\x20\x2f\x20\x48\x54\x54\x50" \
-"\x2f\x31\x2e\x31\x0d\x0a\x55\x73\x65\x72\x2d\x41\x67\x65\x6e\x74" \
-"\x3a\x20\x57\x67\x65\x74\x2f\x31\x2e\x32\x30\x2e\x31\x20\x28\x6c" \
-"\x69\x6e\x75\x78\x2d\x67\x6e\x75\x29\x0d\x0a\x41\x63\x63\x65\x70" \
-"\x74\x3a\x20\x2a\x2f\x2a\x0d\x0a\x41\x63\x63\x65\x70\x74\x2d\x45" \
-"\x6e\x63\x6f\x64\x69\x6e\x67\x3a\x20\x69\x64\x65\x6e\x74\x69\x74" \
-"\x79\x0d\x0a\x48\x6f\x73\x74\x3a\x20\x31\x30\x2e\x30\x2e\x32\x2e" \
-"\x32\x3a\x31\x30\x33\x30\x0d\x0a\x43\x6f\x6e\x6e\x65\x63\x74\x69" \
-"\x6f\x6e\x3a\x20\x4b\x65\x65\x70\x2d\x41\x6c\x69\x76\x65\x0d\x0a" \
-"\x0d\x0a"
-  , 194);
-//  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
-  module__network__ethernet_interface__send_packet(p, i);
-  free(p);
-  }
+//  return;
+//  module_terminal_global_print_c_string("Waiting for syn-ack\n");
+//  for(size_t i=1; i<99999999; i++)
+//  {
+//    // waiting
+////    module_terminal_global_print_c_string(".");
+//  }
+//  {
+//  module_terminal_global_print_c_string("TCP Conn ack\n");
+//  module__network__data__packet *p = new_pk_with_data(
+//"\x52\x55\x0a\x00\x02\x02\x52\x54\x00\x12\x13\x56\x08\x00\x45\x00" \
+//"\x00\x28\x5c\x84\x40\x00\x40\x06\xc6\x3b\x0a\x00\x02\x0f\x0a\x00" \
+//"\x02\x02\xa3\x84\x04\x06\xdb\x7f\xa4\xf7\x00\x00\xfa\x02\x50\x10" \
+//"\xfa\xf0\x7a\xce\x00\x00"
+//  , 54);
+////  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
+//  module__network__ethernet_interface__send_packet(p, i);
+//  free(p);
+//  }
+//  {
+//  module_terminal_global_print_c_string("HTTP req\n");
+//  module__network__data__packet *p = new_pk_with_data(
+//"\x52\x55\x0a\x00\x02\x02\x52\x54\x00\x12\x13\x56\x08\x00\x45\x00" \
+//"\x00\xb4\x5c\x85\x40\x00\x40\x06\xc5\xae\x0a\x00\x02\x0f\x0a\x00" \
+//"\x02\x02\xa3\x84\x04\x06\xdb\x7f\xa4\xf7\x00\x00\xfa\x02\x50\x18" \
+//"\xfa\xf0\xa9\xc9\x00\x00\x47\x45\x54\x20\x2f\x20\x48\x54\x54\x50" \
+//"\x2f\x31\x2e\x31\x0d\x0a\x55\x73\x65\x72\x2d\x41\x67\x65\x6e\x74" \
+//"\x3a\x20\x57\x67\x65\x74\x2f\x31\x2e\x32\x30\x2e\x31\x20\x28\x6c" \
+//"\x69\x6e\x75\x78\x2d\x67\x6e\x75\x29\x0d\x0a\x41\x63\x63\x65\x70" \
+//"\x74\x3a\x20\x2a\x2f\x2a\x0d\x0a\x41\x63\x63\x65\x70\x74\x2d\x45" \
+//"\x6e\x63\x6f\x64\x69\x6e\x67\x3a\x20\x69\x64\x65\x6e\x74\x69\x74" \
+//"\x79\x0d\x0a\x48\x6f\x73\x74\x3a\x20\x31\x30\x2e\x30\x2e\x32\x2e" \
+//"\x32\x3a\x31\x30\x33\x30\x0d\x0a\x43\x6f\x6e\x6e\x65\x63\x74\x69" \
+//"\x6f\x6e\x3a\x20\x4b\x65\x65\x70\x2d\x41\x6c\x69\x76\x65\x0d\x0a" \
+//"\x0d\x0a"
+//  , 194);
+////  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
+//  module__network__ethernet_interface__send_packet(p, i);
+//  free(p);
+//  }
 
 
 
-  return;
-  module_terminal_global_print_c_string("Sending IP_TCP packet\n");
-  module__network__data__packet *response = new_pk();
-  uint32_t dst_ip = 0;
-//  dst_ip = 3627734734; // = 216.58.214.206 = google.com
-//  dst_ip = 3232286790; // 192.168.200.70 = host
-  dst_ip = 167772674; // 10.0.2.2 = GW
-  dst_ip = htonl(dst_ip);
-  uint16_t dst_port = htons(1030); // web server
-  make_ip_tcp_packet(response, dst_ip, dst_port,
-    htons(9876),
-    (module__network__data__ip__tcp_flag__syn),
-    //"", 0
-    "\x02\x04\x05\xb4\x04\x02\x08\x0a\xb3\x7f\x12\xcc\x0\x0\x0\x0\x01\x03\x03\x07", 20
-    //"\x02\x04\x05\xb4", 4
-    , i);
-  module_terminal_print_buffer_hex_bytes(response->buffer, response->length);
-  const module__network__data__ip_header * const response_ip = ip_hdr(response);
-  const module__network__data__ip__tcp_header * const response_tcp =
-    tcp_hdr(response_ip);
-  print_ip_tcp_header(response_tcp);
-  module__network__ethernet_interface__send_packet(response, i);
-  free(response);
-}
-// -------------------------------------------------------------------------- //
-void module__network__queue__process()
-{
+//  return;
+//  module_terminal_global_print_c_string("Sending IP_TCP packet\n");
+//  module__network__data__packet *response = new_pk();
+//  uint32_t dst_ip = 0;
+////  dst_ip = 3627734734; // = 216.58.214.206 = google.com
+////  dst_ip = 3232286790; // 192.168.200.70 = host
+//  dst_ip = 167772674; // 10.0.2.2 = GW
+//  dst_ip = htonl(dst_ip);
+//  uint16_t dst_port = htons(1030); // web server
+//  make_ip_tcp_packet(response, dst_ip, dst_port,
+//    htons(9876),
+//    (module__network__data__ip__tcp_flag__syn),
+//    //"", 0
+//    "\x02\x04\x05\xb4\x04\x02\x08\x0a\xb3\x7f\x12\xcc\x0\x0\x0\x0\x01\x03\x03\x07", 20
+//    //"\x02\x04\x05\xb4", 4
+//    , i);
+//  module_terminal_print_buffer_hex_bytes(response->buffer, response->length);
+//  const module__network__data__ip_header * const response_ip = ip_hdr(response);
+//  const module__network__data__ip__tcp_header * const response_tcp =
+//    tcp_hdr(response_ip);
+//  print_ip_tcp_header(response_tcp);
+//  module__network__ethernet_interface__send_packet(response, i);
+//  free(response);
 }
 // -------------------------------------------------------------------------- //
