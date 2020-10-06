@@ -759,7 +759,7 @@ void module__network__process_ethernet_packet(
 void module__network__test2()
 {
   module__network__ethernet_interface * i =
-    module__network__ethernet_interface_list; // first interface
+    module__network__ethernet_interface__list; // first interface
   // multicast listener report message v2 - not needed
 //  {
 //  module_terminal_global_print_c_string("Sending mlrmv2\n");
@@ -808,6 +808,14 @@ void module__network__test2()
   module__network__ethernet_interface__send_packet(p, i);
   free(p);
   }
+//  module_terminal_global_print_c_string("Wait for packet on driver=");
+//  module_terminal_global_print_hex_uint64((uint64_t)(i->driver));
+//  module_terminal_global_print_c_string("\n");
+  while(i->ipq_index == 0){} // wait for packet
+  const module__network__data__packet * const p =
+    module__network__ethernet_interface__get_packet_from_incoming_queue(i);
+  module_terminal_print_buffer_hex_bytes((char*)(p->buffer), 10);//p->length);
+
   // DHCP request
 //  {
 //  module_terminal_global_print_c_string("Sending DHCP request\n");

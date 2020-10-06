@@ -1,6 +1,7 @@
 // -------------------------------------------------------------------------- //
 // Author: Tancredi-Paul Grozav <paul@grozav.info>
 // -------------------------------------------------------------------------- //
+#include <stdbool.h> // bool
 #include "module_kernel.h"
 #include "module_base.h"
 #include "module_terminal.h"
@@ -258,7 +259,18 @@ void module__driver__rtl8139__interrupt_handler(
         module_kernel_memcpy(driver->rx_buffer + driver->rx_index + 4,
           pk->buffer, pk->length);
       }
-      module__network__process_ethernet_packet(pk, driver->ethernet_interface);
+
+      // instead of processing the packet here ...
+//     module__network__process_ethernet_packet(pk, driver->ethernet_interface);
+      // ... we'll just add it to the interface queue, to be consumed "later".
+      bool is_added =
+        module__network__ethernet_interface__add_packet_to_incoming_queue(pk,
+        driver->ethernet_interface);
+      if(!is_added)
+      {
+        module_terminal_global_print_c_string("Could not add incoming packet"
+          " to interface queue.\n");
+      }
       // end
       free(pk);
       driver->rx_index += round_up(length + 4, 4);

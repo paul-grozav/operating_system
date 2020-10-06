@@ -4,12 +4,13 @@
 #include <stddef.h> // NULL
 #include "module__network__ethernet_interface.h"
 #include "module__network.h"
+#include "module_kernel.h"
 #include "module_terminal.h"
 #include "module_heap.h"
 #include "module__driver__rtl8139.h"
 // -------------------------------------------------------------------------- //
-module__network__ethernet_interface * module__network__ethernet_interface_list =
-  NULL;
+module__network__ethernet_interface *
+  module__network__ethernet_interface__list = NULL;
 // -------------------------------------------------------------------------- //
 void module__network__ethernet_interface_init(
   module__network__ethernet_interface * const i)
@@ -17,10 +18,15 @@ void module__network__ethernet_interface_init(
   i->pci_device_info = NULL;
   i->driver = NULL;
   i->mac_address = module__network__data__mac_address__zero_mac;
+  i->ipq_size = 100; // default
+  i->incoming_packets_queue = NULL;
+  i->incoming_packets_queue = malloc(i->ipq_size
+    * sizeof(module__network__data__packet *));
+  i->ipq_index = 0;
   i->next_interface = NULL;
 }
 // -------------------------------------------------------------------------- //
-void module__network__ethernet_interface_init_all()
+void module__network__ethernet_interface__init_all()
 {
   module_terminal_global_print_c_string("Detecting ethernet interfaces.\n");
   if(module__pci__devices == NULL)
@@ -49,14 +55,16 @@ void module__network__ethernet_interface_init_all()
         module_terminal_global_print_uint64(i->slot);
         module_terminal_global_print_c_string(", function=");
         module_terminal_global_print_uint64(i->function);
-        module_terminal_global_print_c_string(" ...\n");
+        module_terminal_global_print_c_string(", creating ethernet interface=");
         module__network__ethernet_interface * ei =
           malloc(sizeof(module__network__ethernet_interface));
-        module__network__ethernet_interface_list = ei;
+        module_terminal_global_print_hex_uint64((uint64_t)(ei));
+        module_terminal_global_print_c_string(" ...\n");
+        module__network__ethernet_interface__list = ei;
         module__network__ethernet_interface_init(ei);
         ei->pci_device_info = i;
         module__driver__rtl8139__driver_init(i->bus, i->slot, i->function,
-          &(ei->mac_address), &(ei->driver), &ei);
+          &(ei->mac_address), &(ei->driver), ei);
         module__network__print_mac(&(ei->mac_address));
         module_terminal_global_print_c_string("\n");
       }
@@ -81,12 +89,12 @@ void module__network__ethernet_interface_init_all()
   while(i != NULL);
 }
 // -------------------------------------------------------------------------- //
-void module__network__ethernet_interface_free_all()
+void module__network__ethernet_interface__free_all()
 {
   // iterate to end of list
   const module__network__ethernet_interface * i =
-    module__network__ethernet_interface_list;
-  module__network__ethernet_interface_list = NULL;
+    module__network__ethernet_interface__list;
+  module__network__ethernet_interface__list = NULL;
   const module__network__ethernet_interface * next = NULL;
   while(i != NULL)
   {
@@ -95,10 +103,54 @@ void module__network__ethernet_interface_free_all()
     module_terminal_global_print_hex_uint64((uint32_t)(i));
     module_terminal_global_print_c_string(" from list.\n");
     // should i shut down the device in any way? maybe free something?
+    free(i->incoming_packets_queue);
     free(i);
     // Move to next device
     i = next;
   }
+}
+// -------------------------------------------------------------------------- //
+bool module__network__ethernet_interface__add_packet_to_incoming_queue(
+  const module__network__data__packet * const p,
+  module__network__ethernet_interface * const i)
+{
+  if(i->ipq_index == i->ipq_size)
+  {
+    module_terminal_global_print_c_string("Interface incoming queue is full");
+    // queue is full
+    return false;
+  }
+//  module_terminal_global_print_c_string("add on idx=");
+//  module_terminal_global_print_uint64(i->ipq_index);
+//  module_terminal_global_print_c_string(" at addr=");
+//  module_terminal_global_print_hex_uint64(
+//    (uint64_t)(&(i->incoming_packets_queue[i->ipq_index])));
+//  module_terminal_global_print_c_string(" on iface=");
+//  module_terminal_global_print_hex_uint64((uint64_t)(i));
+//  module_terminal_global_print_c_string("\n");
+  i->incoming_packets_queue[i->ipq_index] = p;
+  i->ipq_index += 1;
+  return true;
+}
+// -------------------------------------------------------------------------- //
+const module__network__data__packet *
+  module__network__ethernet_interface__get_packet_from_incoming_queue(
+  module__network__ethernet_interface * const i)
+{
+//  module_terminal_global_print_c_string("get packet from idx=0");
+//  module_terminal_global_print_c_string(" at addr=");
+//  module_terminal_global_print_hex_uint64(
+//    (uint64_t)(&(i->incoming_packets_queue[0])));
+//  module_terminal_global_print_c_string(" when idx=");
+//  module_terminal_global_print_uint64(i->ipq_index);
+//  module_terminal_global_print_c_string("\n");
+  const module__network__data__packet * const r = i->incoming_packets_queue[0];
+  i->ipq_index -= 1;
+  module_kernel_memcpy(&(i->incoming_packets_queue[1]),
+    &(i->incoming_packets_queue[0]),
+    i->ipq_index * sizeof(module__network__data__packet *));
+  i->incoming_packets_queue[i->ipq_index] = NULL;
+  return r;
 }
 // -------------------------------------------------------------------------- //
 void module__network__ethernet_interface__send_packet(

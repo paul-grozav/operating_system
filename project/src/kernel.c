@@ -94,7 +94,7 @@ void kernel_main()
 //  module_video_test();
   module__pci__detect_devices();
   module__pci__test();
-  module__network__ethernet_interface_init_all();
+  module__network__ethernet_interface__init_all();
 //  module__driver__rtl8139__test();
 //  module_terminal_global_print_c_string("Press any key to send NIC data...");
 //  module_keyboard_wait_keypress();
@@ -114,7 +114,7 @@ void kernel_main()
 
   module_terminal_global_print_c_string("Freeing Ethernet interfaces list"
     " ...\n");
-  module__network__ethernet_interface_free_all();
+  module__network__ethernet_interface__free_all();
   module_terminal_global_print_c_string("Done freeing Ethernet interfaces"
     " list.\n");
 
