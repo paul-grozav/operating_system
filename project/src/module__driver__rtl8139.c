@@ -321,7 +321,7 @@ void module__driver__rtl8139__driver_init(const uint8_t bus, const uint8_t slot,
   driver->ethernet_interface = ethernet_interface;
   driver->next_driver = NULL;
   module_terminal_global_print_c_string("Driver instance = ");
-  module_terminal_global_print_hex_uint64((uint64_t)(driver));
+  module_terminal_global_print_hex_uint64((uint32_t)(driver));
   module_terminal_global_print_c_string("\n");
   module__driver__rtl8139__global_list_add_driver(driver);
   // PCI address of network card: bus, slot, function
@@ -362,7 +362,7 @@ void module__driver__rtl8139__driver_init(const uint8_t bus, const uint8_t slot,
       uint8_t mac_byte = module_kernel_in_8(driver->iobase + i);
       mac_address->data[i] = mac_byte;
     }
-    module__network__print_mac(mac_address);
+    module__network__data__print_mac(mac_address);
   }
   module_terminal_global_print_c_string(" .\n");
 

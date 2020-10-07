@@ -58,14 +58,14 @@ void module__network__ethernet_interface__init_all()
         module_terminal_global_print_c_string(", creating ethernet interface=");
         module__network__ethernet_interface * ei =
           malloc(sizeof(module__network__ethernet_interface));
-        module_terminal_global_print_hex_uint64((uint64_t)(ei));
+        module_terminal_global_print_hex_uint64((uint32_t)(ei));
         module_terminal_global_print_c_string(" ...\n");
         module__network__ethernet_interface__list = ei;
         module__network__ethernet_interface_init(ei);
         ei->pci_device_info = i;
         module__driver__rtl8139__driver_init(i->bus, i->slot, i->function,
           &(ei->mac_address), &(ei->driver), ei);
-        module__network__print_mac(&(ei->mac_address));
+        module__network__data__print_mac(&(ei->mac_address));
         module_terminal_global_print_c_string("\n");
       }
       else

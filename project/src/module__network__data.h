@@ -7,6 +7,30 @@
 #include <stdint.h> // uintX
 #include <stddef.h> // size_t
 // -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
+// Utils
+// -------------------------------------------------------------------------- //
+//! these were "static inline" in .c file
+uint16_t module__network__data__ntohs(const uint16_t x);
+// -------------------------------------------------------------------------- //
+uint16_t module__network__data__htons(const uint16_t x);
+// -------------------------------------------------------------------------- //
+uint32_t module__network__data__ntohl(const uint32_t x);
+// -------------------------------------------------------------------------- //
+uint32_t module__network__data__htonl(const uint32_t x);
+// -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
+// Packet
 // -------------------------------------------------------------------------- //
 typedef struct
 {
@@ -88,6 +112,12 @@ module__network__data__ethernet_header *
   module__network__data__packet_get_ethernet_header(
   module__network__data__packet * const p);
 // -------------------------------------------------------------------------- //
+void module__network__data__print_mac(
+  const module__network__data__mac_address * const ma);
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_print_ethernet_header(
+  const module__network__data__ethernet_header * const h);
+// -------------------------------------------------------------------------- //
 
 
 
@@ -134,6 +164,14 @@ enum module__network__data__ethernet__arp_operation_type
   //! ARP response
   module__network__data__ethernet__arp_operation_type__response = 2
 };
+// -------------------------------------------------------------------------- //
+module__network__data__arp_header *
+  module__network__data__packet_get_arp_header(
+  module__network__data__packet * const p);
+// -------------------------------------------------------------------------- //
+void module__network__data__arp__header_print(
+  const module__network__data__arp_header * const h);
+// -------------------------------------------------------------------------- //
 
 
 
@@ -142,13 +180,6 @@ enum module__network__data__ethernet__arp_operation_type
 // -------------------------------------------------------------------------- //
 // Internet Protocol (IP) Packet
 // -------------------------------------------------------------------------- //
-/**
- * Create checksum for ip packet.
- * @param[in] p - packet to create the checksum for. The checksum will be saved
- * inside this packet's specific field.
- */
-void module__network__data__ip_checksum(module__network__data__packet *p);
-
 /**
  * This is present after the ETH header, if it's an IP packet.
  * See: https://en.wikipedia.org/wiki/IPv4#Packet_structure
@@ -292,6 +323,24 @@ enum module__network__data__ethernet__ip__protocol_type
   //! User Datagram Protocol
   module__network__data__ethernet__ip__protocol_type__udp = 17
 };
+// -------------------------------------------------------------------------- //
+/**
+ * Create checksum for ip packet.
+ * @param[in] p - packet to create the checksum for. The checksum will be saved
+ * inside this packet's specific field.
+ */
+void module__network__data__ip_checksum(module__network__data__packet *p);
+// -------------------------------------------------------------------------- //
+void module__network__data__print_ipv4(const uint32_t ip);
+// -------------------------------------------------------------------------- //
+module__network__data__ip_header * module__network__data__packet_get_ip_header(
+  module__network__data__packet * const p);
+// -------------------------------------------------------------------------- //
+void module__network__data__ip__checksum(module__network__data__packet *p);
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_print_ip_header(
+  const module__network__data__ip_header * const h);
+// -------------------------------------------------------------------------- //
 
 
 
@@ -349,6 +398,21 @@ typedef struct __attribute__((__packed__))
   char data[];
 } module__network__data__ip__tcp_header;
 // -------------------------------------------------------------------------- //
+module__network__data__ip__tcp_header *
+  module__network__data__packet_get_ip_tcp_header(
+  module__network__data__ip_header * const ip_header);
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_print_ip_tcp_header(
+  const module__network__data__ip__tcp_header * const h);
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_tcp_checksum(
+  module__network__data__packet *p);
+// -------------------------------------------------------------------------- //
+
+
+
+
+
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //
