@@ -24,6 +24,10 @@ uint32_t module__network__data__ntohl(const uint32_t x);
 // -------------------------------------------------------------------------- //
 uint32_t module__network__data__htonl(const uint32_t x);
 // -------------------------------------------------------------------------- //
+//! From human readable format, to human readable format
+uint32_t module__network__data__ip(const uint8_t a, const uint8_t b,
+  const uint8_t c, const uint8_t d);
+// -------------------------------------------------------------------------- //
 
 
 
@@ -69,7 +73,7 @@ module__network__data__packet * module__network__data__packet__create_with_data(
 enum module__network__data__ethernet_header_type
 {
   //! An IP header follows the ETH header
-  module__network__data__ethernet_header_type__ip = 0x0800,
+  module__network__data__ethernet_header_type__ip_v4 = 0x0800,
 
   //! An ARP header follows the ETH header
   module__network__data__ethernet_header_type__arp = 0x0806,
@@ -111,6 +115,10 @@ typedef struct __attribute__((__packed__))
 module__network__data__ethernet_header *
   module__network__data__packet_get_ethernet_header(
   module__network__data__packet * const p);
+// -------------------------------------------------------------------------- //
+const module__network__data__ethernet_header *
+  module__network__data__packet_get_ethernet_header_const(
+  const module__network__data__packet * const p);
 // -------------------------------------------------------------------------- //
 void module__network__data__print_mac(
   const module__network__data__mac_address * const ma);
@@ -169,6 +177,10 @@ module__network__data__arp_header *
   module__network__data__packet_get_arp_header(
   module__network__data__packet * const p);
 // -------------------------------------------------------------------------- //
+const module__network__data__arp_header *
+  module__network__data__packet_get_arp_header_const(
+  const module__network__data__packet * const p);
+// -------------------------------------------------------------------------- //
 void module__network__data__arp__header_print(
   const module__network__data__arp_header * const h);
 // -------------------------------------------------------------------------- //
@@ -194,6 +206,10 @@ typedef struct __attribute__((__packed__))
    * 5 × 32 bits = 160 bits = 20 bytes. As a 4-bit field, the maximum value is
    * 15, this means that the maximum size of the IPv4 header is 15 × 32 bits,
    * or 480 bits = 60 bytes.
+   *
+   * The header_length and version fields form a byte. A value of 0x45 (base 16)
+   * means 0b01000101 which is version = 0b0100 = 4 and
+   * header_length = 0b0101 = 5 .
    */
   uint8_t header_length : 4;
 
@@ -336,10 +352,47 @@ void module__network__data__print_ipv4(const uint32_t ip);
 module__network__data__ip_header * module__network__data__packet_get_ip_header(
   module__network__data__packet * const p);
 // -------------------------------------------------------------------------- //
+const module__network__data__ip_header *
+  module__network__data__packet_get_ip_header_const(
+  const module__network__data__packet * const p);
+// -------------------------------------------------------------------------- //
 void module__network__data__ip__checksum(module__network__data__packet *p);
 // -------------------------------------------------------------------------- //
 void module__network__data__packet_print_ip_header(
   const module__network__data__ip_header * const h);
+// -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
+// User Datagram Protocol (UDP)
+// -------------------------------------------------------------------------- //
+typedef struct __attribute__((__packed__))
+{
+  uint16_t source_port;
+  uint16_t destination_port;
+  uint16_t length;
+  uint16_t checksum;
+
+  //! Data following the IP_UDP header
+  char data[];
+} module__network__data__ip__udp_header;
+// -------------------------------------------------------------------------- //
+module__network__data__ip__udp_header *
+  module__network__data__packet_get_ip_udp_header(
+  module__network__data__ip_header * const ip_header);
+// -------------------------------------------------------------------------- //
+const module__network__data__ip__udp_header *
+  module__network__data__packet_get_ip_udp_header_const(
+  const module__network__data__ip_header * const ip_header);
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_print_ip_udp_header(
+  const module__network__data__ip__udp_header * const h);
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_udp_checksum(
+  module__network__data__packet *p);
 // -------------------------------------------------------------------------- //
 
 
@@ -402,11 +455,88 @@ module__network__data__ip__tcp_header *
   module__network__data__packet_get_ip_tcp_header(
   module__network__data__ip_header * const ip_header);
 // -------------------------------------------------------------------------- //
+const module__network__data__ip__tcp_header *
+  module__network__data__packet_get_ip_tcp_header_const(
+  const module__network__data__ip_header * const ip_header);
+// -------------------------------------------------------------------------- //
 void module__network__data__packet_print_ip_tcp_header(
   const module__network__data__ip__tcp_header * const h);
 // -------------------------------------------------------------------------- //
 void module__network__data__packet_tcp_checksum(
   module__network__data__packet *p);
+// -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
+// Bootstrap Protocol (BOOTP)
+// -------------------------------------------------------------------------- //
+typedef struct __attribute__((__packed__))
+{
+  //! packet opcode type / message type
+  uint8_t op_code;
+
+  //! Hardware address type
+  uint8_t hardware_address_type;
+
+  //! Hardware address length
+  uint8_t hardware_address_length;
+
+  //! Gateway hops
+  uint8_t gateway_hops;
+
+  //! Transaction ID
+  uint32_t transaction_id;
+
+  //! Seconds since boot began
+  uint16_t seconds_since_boot;
+
+  //! BootP flags
+  uint16_t flags;
+
+  //! Client IP address
+  uint32_t client_ip_address;
+
+  //! Your (client) IP address
+  uint32_t your_ip_address;
+
+  //! Next server IP address
+  uint32_t server_ip_address;
+
+  //! Gateway (relay agent) IP address
+  uint32_t gateway_ip_address;
+
+  //! Client hardware (mac) address
+  module__network__data__mac_address client_hardware_address;
+
+  //! Server host name
+  uint8_t	server_host_name[64];
+
+  //! boot file name
+  uint8_t boot_file_name[128];
+
+#ifdef SUPPORT_DHCP
+#define BOOTP_VENDSIZE 312
+#else
+#define BOOTP_VENDSIZE 64
+#endif
+
+  //! Vendor-specific area
+  uint8_t	vendor_area[BOOTP_VENDSIZE];
+} module__network__data__ip__udp__bootp_header;
+// -------------------------------------------------------------------------- //
+module__network__data__ip__udp__bootp_header *
+  module__network__data__packet_get_ip_udp_bootp_header(
+  module__network__data__ip__udp_header * const udp_header);
+// -------------------------------------------------------------------------- //
+const module__network__data__ip__udp__bootp_header *
+  module__network__data__packet_get_ip_udp_bootp_header_const(
+  const module__network__data__ip__udp_header * const udp_header);
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_print_ip_udp_bootp_header(
+  const module__network__data__ip__udp__bootp_header * const h);
 // -------------------------------------------------------------------------- //
 
 

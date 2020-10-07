@@ -53,6 +53,17 @@ uint32_t module__network__data__htonl(const uint32_t x)
   );
 }
 // -------------------------------------------------------------------------- //
+uint32_t module__network__data__ip(const uint8_t a, const uint8_t b,
+  const uint8_t c, const uint8_t d)
+{
+  return (
+    a <<  0 |
+    b <<  8 |
+    c << 16 |
+    d << 24
+  );
+}
+// -------------------------------------------------------------------------- //
 
 
 
@@ -122,6 +133,13 @@ module__network__data__ethernet_header *
   return (module__network__data__ethernet_header *)&(p->buffer);
 }
 // -------------------------------------------------------------------------- //
+const module__network__data__ethernet_header *
+  module__network__data__packet_get_ethernet_header_const(
+  const module__network__data__packet * const p)
+{
+  return (const module__network__data__ethernet_header *)&(p->buffer);
+}
+// -------------------------------------------------------------------------- //
 void module__network__data__packet_print_ethernet_header(
   const module__network__data__ethernet_header * const h)
 {
@@ -136,7 +154,7 @@ void module__network__data__packet_print_ethernet_header(
   {
     module_terminal_global_print_c_string("ARP");
   }
-  else if(eth_type == module__network__data__ethernet_header_type__ip)
+  else if(eth_type == module__network__data__ethernet_header_type__ip_v4)
   {
     module_terminal_global_print_c_string("IP");
   }
@@ -164,6 +182,15 @@ module__network__data__arp_header *
   module__network__data__packet * const p)
 {
   return (module__network__data__arp_header *)(p->buffer +
+    sizeof(module__network__data__ethernet_header)
+  );
+}
+// -------------------------------------------------------------------------- //
+const module__network__data__arp_header *
+  module__network__data__packet_get_arp_header_const(
+  const module__network__data__packet * const p)
+{
+  return (const module__network__data__arp_header *)(p->buffer +
     sizeof(module__network__data__ethernet_header)
   );
 }
@@ -235,6 +262,15 @@ module__network__data__ip_header * module__network__data__packet_get_ip_header(
   module__network__data__packet * const p)
 {
   return (module__network__data__ip_header *)(p->buffer +
+    sizeof(module__network__data__ethernet_header)
+  );
+}
+// -------------------------------------------------------------------------- //
+const module__network__data__ip_header *
+  module__network__data__packet_get_ip_header_const(
+  const module__network__data__packet * const p)
+{
+  return (const module__network__data__ip_header *)(p->buffer +
     sizeof(module__network__data__ethernet_header)
   );
 }
@@ -324,6 +360,57 @@ void module__network__data__packet_print_ip_header(
 
 
 // -------------------------------------------------------------------------- //
+// User Datagram Protocol (UDP)
+// -------------------------------------------------------------------------- //
+module__network__data__ip__udp_header *
+  module__network__data__packet_get_ip_udp_header(
+  module__network__data__ip_header * const ip_header)
+{
+  return (module__network__data__ip__udp_header *)(
+    ( (uint8_t *)(ip_header) ) + (ip_header->header_length * 4)
+  );
+}
+// -------------------------------------------------------------------------- //
+const module__network__data__ip__udp_header *
+  module__network__data__packet_get_ip_udp_header_const(
+  const module__network__data__ip_header * const ip_header)
+{
+  return (const module__network__data__ip__udp_header *)(
+    ( (const uint8_t *)(ip_header) ) + (ip_header->header_length * 4)
+  );
+}
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_print_ip_udp_header(
+  const module__network__data__ip__udp_header * const h)
+{
+  module_terminal_global_print_c_string("udp_header");
+  module_terminal_global_print_c_string("{ \"source_port\": \"");
+  module_terminal_global_print_uint64(module__network__data__ntohs(
+    h->source_port));
+  module_terminal_global_print_c_string("\", \"destination_port\": \"");
+  module_terminal_global_print_uint64(module__network__data__ntohs(
+    h->destination_port));
+  module_terminal_global_print_c_string("\", \"length\": \"");
+  module_terminal_global_print_uint64(module__network__data__ntohs(h->length));
+  module_terminal_global_print_c_string("\", \"checksum\": \"");
+  module_terminal_global_print_uint64(
+    module__network__data__ntohs(h->checksum));
+  module_terminal_global_print_c_string("\" }");
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_udp_checksum(
+  module__network__data__packet *p)
+{
+  (void)p;//unused
+}
+// -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
 // Transmission Control Protocol (TCP) Packet
 // -------------------------------------------------------------------------- //
 void module__network__data__packet_print_ip_tcp_header(
@@ -383,6 +470,15 @@ module__network__data__ip__tcp_header *
   );
 }
 // -------------------------------------------------------------------------- //
+const module__network__data__ip__tcp_header *
+  module__network__data__packet_get_ip_tcp_header_const(
+  const module__network__data__ip_header * const ip_header)
+{
+  return (const module__network__data__ip__tcp_header *)(
+    ( (const uint8_t *)(ip_header) ) + (ip_header->header_length * 4)
+  );
+}
+// -------------------------------------------------------------------------- //
 void module__network__data__packet_tcp_checksum(
   module__network__data__packet *p)
 {
@@ -391,8 +487,8 @@ void module__network__data__packet_tcp_checksum(
   module__network__data__ip__tcp_header *tcp =
     module__network__data__packet_get_ip_tcp_header(ip);
 
-  int length = module__network__data__ntohs(ip->total_length);
-  int n_bytes = length - sizeof(module__network__data__ip_header);
+  uint16_t length = module__network__data__ntohs(ip->total_length);
+  uint16_t n_bytes = length - sizeof(module__network__data__ip_header);
 
   struct tcp_pseudoheader
   {
@@ -446,4 +542,65 @@ void module__network__data__packet_tcp_checksum(
   tcp->checksum = ~(uint16_t)sum;
   tcp->checksum = 0x77c1;
 }
+
+
+
+
+
+// -------------------------------------------------------------------------- //
+// Bootstrap Protocol (BOOTP)
+// -------------------------------------------------------------------------- //
+module__network__data__ip__udp__bootp_header *
+  module__network__data__packet_get_ip_udp_bootp_header(
+  module__network__data__ip__udp_header * const udp_header)
+{
+  return (module__network__data__ip__udp__bootp_header *)(udp_header->data);
+}
+// -------------------------------------------------------------------------- //
+const module__network__data__ip__udp__bootp_header *
+  module__network__data__packet_get_ip_udp_bootp_header_const(
+  const module__network__data__ip__udp_header * const udp_header)
+{
+  return
+    (const module__network__data__ip__udp__bootp_header *)(udp_header->data);
+}
+// -------------------------------------------------------------------------- //
+void module__network__data__packet_print_ip_udp_bootp_header(
+  const module__network__data__ip__udp__bootp_header * const h)
+{
+  module_terminal_global_print_c_string("bootp_header");
+  module_terminal_global_print_c_string("{ \"op_code\": \"");
+  module_terminal_global_print_uint64(h->op_code);
+  module_terminal_global_print_c_string("\", \"hardware_address_type\": \"");
+  module_terminal_global_print_uint64(h->hardware_address_type);
+  module_terminal_global_print_c_string("\", \"hardware_address_length\": \"");
+  module_terminal_global_print_uint64(h->hardware_address_length);
+  module_terminal_global_print_c_string("\", \"gateway_hops\": \"");
+  module_terminal_global_print_uint64(h->gateway_hops);
+  module_terminal_global_print_c_string("\", \"transaction_id\": \"");
+  module_terminal_global_print_uint64(
+    module__network__data__ntohl(h->transaction_id));
+  module_terminal_global_print_c_string("\", \"seconds_since_boot\": \"");
+  module_terminal_global_print_uint64(h->seconds_since_boot);
+  module_terminal_global_print_c_string("\", \"flags\": \"");
+  module_terminal_global_print_uint64(h->flags);
+  module_terminal_global_print_c_string("\", \"client_ip_address\": \"");
+  module__network__data__print_ipv4(h->client_ip_address);
+  module_terminal_global_print_c_string("\", \"your_ip_address\": \"");
+  module__network__data__print_ipv4(h->your_ip_address);
+  module_terminal_global_print_c_string("\", \"server_ip_address\": \"");
+  module__network__data__print_ipv4(h->server_ip_address);
+  module_terminal_global_print_c_string("\", \"gateway_ip_address\": \"");
+  module__network__data__print_ipv4(h->gateway_ip_address);
+  module_terminal_global_print_c_string("\", \"client_hardware_address\": \"");
+  module__network__data__print_mac(&(h->client_hardware_address));
+  module_terminal_global_print_c_string("\" }");
+  module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
+
+
+
+
+
 // -------------------------------------------------------------------------- //
