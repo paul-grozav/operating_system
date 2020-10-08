@@ -79,6 +79,7 @@ module__network__data__packet * module__network__data__packet__alloc()
   module__network__data__packet * new_pk = malloc(packet_size);
   module_kernel_memset(new_pk, 1, packet_size);
   new_pk->length = -1;
+//  new_pk->length = packet_size;
 //  new_pk->from = NULL;
 //  new_pk->refcount = 1;
   return new_pk;
@@ -402,7 +403,65 @@ void module__network__data__packet_print_ip_udp_header(
 void module__network__data__packet_udp_checksum(
   module__network__data__packet *p)
 {
-  (void)p;//unused
+  module__network__data__ip_header *ip =
+    module__network__data__packet_get_ip_header(p);
+  module__network__data__ip__udp_header *udp =
+    module__network__data__packet_get_ip_udp_header(ip);
+
+  uint16_t length = module__network__data__ntohs(ip->total_length);
+  uint16_t n_bytes = length - sizeof(module__network__data__ip_header);
+
+  struct udp_pseudoheader
+  {
+    uint32_t source_ip;
+    uint32_t destination_ip;
+    uint8_t _zero;
+    uint8_t protocol;
+    uint16_t tcp_length;
+  };
+  struct udp_pseudoheader t =
+  {
+    ip->source_ip,
+    ip->destination_ip,
+    0,
+    module__network__data__ethernet__ip__protocol_type__udp,
+    module__network__data__htons(n_bytes),
+  };
+
+  uint32_t sum = 0;
+  uint16_t *c = (uint16_t *)&t;
+  for (size_t i=0; i<sizeof(t)/2; i++)
+  {
+    sum += c[i];
+  }
+
+  // Disable warning for this line:
+  // warning: converting a packed 'module__network__data__ip__udp_header' {aka
+  // 'struct <anonymous>'} pointer (alignment 1) to a 'uint16_t' {aka 'short
+  // unsigned int'} pointer (alignment 2) may result in an unaligned pointer
+  // value [-Waddress-of-packed-member]
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+  c = (uint16_t *)udp;
+  #pragma GCC diagnostic pop
+  for (int i=0; i<n_bytes/2; i++)
+  {
+    sum += c[i];
+  }
+
+  if (n_bytes % 2 != 0)
+  {
+    uint16_t last = ((uint8_t *)ip)[length-1];
+    sum += last;
+  }
+
+  while (sum >> 16)
+  {
+    sum = (sum & 0xFFFF) + (sum >> 16);
+  }
+
+  udp->checksum = ~(uint16_t)sum;
+//  udp->checksum = 0x77c1;
 }
 // -------------------------------------------------------------------------- //
 
@@ -540,7 +599,7 @@ void module__network__data__packet_tcp_checksum(
   }
 
   tcp->checksum = ~(uint16_t)sum;
-  tcp->checksum = 0x77c1;
+//  tcp->checksum = 0x77c1;
 }
 
 
@@ -594,8 +653,13 @@ void module__network__data__packet_print_ip_udp_bootp_header(
   module__network__data__print_ipv4(h->gateway_ip_address);
   module_terminal_global_print_c_string("\", \"client_hardware_address\": \"");
   module__network__data__print_mac(&(h->client_hardware_address));
-  module_terminal_global_print_c_string("\" }");
-  module_terminal_global_print_c_string("\n");
+  module_terminal_global_print_c_string("\", \"server_host_name\": \"");
+  module_terminal_global_print_c_string((const char*)(h->server_host_name));
+  module_terminal_global_print_c_string("\", \"boot_file_name\": \"");
+  module_terminal_global_print_c_string((const char*)(h->boot_file_name));
+  module_terminal_global_print_c_string("\", \"vendor_area\": \"");
+  module_terminal_global_print_c_string((const char*)(h->vendor_area));
+  module_terminal_global_print_c_string("\" }\n");
 }
 // -------------------------------------------------------------------------- //
 

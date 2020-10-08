@@ -125,6 +125,12 @@ void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
 void module_terminal_print_buffer_hex_bytes(const uint8_t * const base,
   const size_t count)
 {
+//  module_terminal_global_print_c_string("printing b=");
+//  module_terminal_global_print_uint64((uint32_t)(base));
+//  module_terminal_global_print_c_string(" , len=");
+//  module_terminal_global_print_uint64(count);
+//  module_terminal_global_print_c_string("\n");
+
   char buffer[20+1];
   size_t l = 0;
   for (size_t i=0; i<count; i++)

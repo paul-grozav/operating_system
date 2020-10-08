@@ -473,6 +473,7 @@ void module__network__data__packet_tcp_checksum(
 // -------------------------------------------------------------------------- //
 // Bootstrap Protocol (BOOTP)
 // -------------------------------------------------------------------------- //
+//! https://tools.ietf.org/html/rfc951
 typedef struct __attribute__((__packed__))
 {
   //! packet opcode type / message type
@@ -508,8 +509,8 @@ typedef struct __attribute__((__packed__))
   //! Gateway (relay agent) IP address
   uint32_t gateway_ip_address;
 
-  //! Client hardware (mac) address
-  module__network__data__mac_address client_hardware_address;
+  //! Client hardware (mac) address - 16 bytes ( mac=6 + padding of 10 )
+  uint8_t	client_hardware_address[16];
 
   //! Server host name
   uint8_t	server_host_name[64];
