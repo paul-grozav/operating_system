@@ -736,23 +736,17 @@ bool
   return true;
 }
 // -------------------------------------------------------------------------- //
-void module__network__service__dhcp__client__get_net_config(
-  module__network__ethernet_interface * const interface)
+bool module__network__service__dhcp__client__get_net_config(
+  module__network__ethernet_interface * const interface,
+  module__network__data__dhcp_config * const cfg)
 {
-  module__network__data__dhcp_config cfg;
-  cfg.ip = 0; // invalid value
-  cfg.subnet_mask = 0; // invalid value
-  cfg.gw = 0; // invalid value
-  cfg.dns = 0; // invalid value
-  cfg.dhcp_server_ip= 0; // invalid value
-  cfg.lease_time_seconds = 0; // invalid value
 
   bool is_ok = false;
   module__network__service__dhcp__client__step1__send_dhcp_discover_packet(
     interface);
   is_ok =
     module__network__service__dhcp__client__step2__receive_dhcp_offer_packet(
-    interface, &cfg);
+    interface, cfg);
 
   if(!is_ok)
   {
@@ -761,38 +755,16 @@ void module__network__service__dhcp__client__get_net_config(
   }
 
   module__network__service__dhcp__client__step3__send_dhcp_request_packet(
-    interface, &cfg);
+    interface, cfg);
   is_ok =
   module__network__service__dhcp__client__step4__receive_dhcp_acknowledge_packet
-    (interface, &cfg);
+    (interface, cfg);
 
   if(!is_ok)
   {
     module_terminal_global_print_c_string("Problem while requesting a"
       " DHCP configuration!\n");
   }
-
-  module_terminal_global_print_c_string("Client DHCP configuration =\n{\n");
-  module_terminal_global_print_c_string("  \"IP\"=\"");
-  module__network__data__print_ipv4(cfg.ip);
-  module_terminal_global_print_c_string("\",\n  \"subnet_mask\"=\"");
-  module__network__data__print_ipv4(cfg.subnet_mask);
-  module_terminal_global_print_c_string("\",\n  \"GW\"=\"");
-  module__network__data__print_ipv4(cfg.gw);
-  module_terminal_global_print_c_string("\",\n  \"DNS\"=\"");
-  module__network__data__print_ipv4(cfg.dns);
-  module_terminal_global_print_c_string("\",\n  \"DHCP_server_IP\"=\"");
-  module__network__data__print_ipv4(cfg.dhcp_server_ip);
-  module_terminal_global_print_c_string("\",\n  \"DHCP_server_MAC\"=\"");
-  module__network__data__print_mac(&(cfg.dhcp_server_mac));
-  module_terminal_global_print_c_string("\",\n  \"lease_seconds\"=\"");
-  module_terminal_global_print_uint64(cfg.lease_time_seconds);
-  module_terminal_global_print_c_string("s\"\n}\n");
-
-  module_terminal_global_print_c_string("Remember that mac=");
-  module__network__data__print_mac(&(cfg.dhcp_server_mac));
-  module_terminal_global_print_c_string(" has IPv4=");
-  module__network__data__print_ipv4(cfg.dhcp_server_ip);
-  module_terminal_global_print_c_string(" .\n");
+  return is_ok;
 }
 // -------------------------------------------------------------------------- //
