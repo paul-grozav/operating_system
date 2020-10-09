@@ -543,6 +543,40 @@ void module__network__data__packet_print_ip_udp_bootp_header(
 
 
 // -------------------------------------------------------------------------- //
+// Other structures
+// -------------------------------------------------------------------------- //
+//! info received from a DHCP server, for our DHCP client (this machine)
+typedef struct
+{
+  //! IP address given to client by DHCP server
+  uint32_t ip;
+
+  //! subnet mask given by DHCP server to client
+  uint32_t subnet_mask;
+
+  //! GateWay IP address given by DHCP server to client(as router)
+  uint32_t gw;
+
+  //! DNS (server) IP address given by DHCP server to client
+  uint32_t dns;
+
+  //! IP of DHCP server that made that offer
+  uint32_t dhcp_server_ip;
+
+  //! mac address of DHCP server that made that offer
+  module__network__data__mac_address dhcp_server_mac;
+
+  //! Time (in seconds) until that offer expires, and you have to renew your
+  //! configuration.
+  uint32_t lease_time_seconds;
+} module__network__data__dhcp_config;
+// -------------------------------------------------------------------------- //
+
+
+
+
+
+// -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //
 
