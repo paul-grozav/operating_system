@@ -69,3 +69,23 @@ void module_kernel_memcpy(const void * const source, void* destination,
   }
 }
 // -------------------------------------------------------------------------- //
+int8_t module_kernel_memcmp(const void * const a,
+  const void * const b, const size_t size)
+{
+  for(size_t i=0; i<size; i++)
+  {
+    if( *(((const uint8_t*)(a)) + i)  !=  *(((const uint8_t*)(b)) + i) )
+    {
+      if( *(((const uint8_t*)(a)) + i)  <  *(((const uint8_t*)(b)) + i) )
+      {
+        return -1;
+      }
+      else
+      {
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+// -------------------------------------------------------------------------- //

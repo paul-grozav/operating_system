@@ -280,6 +280,9 @@ void module__network__data__ip__checksum(module__network__data__packet *p)
 {
   module__network__data__ip_header *ip =
     module__network__data__packet_get_ip_header(p);
+  ip->header_checksum = 0; // RFC 791 says that "For purposes of
+  // computing the checksum, the value of the checksum field is zero."
+
 
   // Disable warning:
   // warning: converting a packed 'module__network__data__ip_header' {aka
@@ -298,7 +301,6 @@ void module__network__data__ip__checksum(module__network__data__packet *p)
   uint16_t checksum = (checksum32 & 0xFFFF) + (checksum32 >> 16);
 
   ip->header_checksum = ~checksum;
-//  ip->header_checksum = 0x1870; // hardcoded !!!!!!!!!!!!!
 }
 // -------------------------------------------------------------------------- //
 void module__network__data__packet_print_ip_header(
@@ -407,6 +409,9 @@ void module__network__data__packet_udp_checksum(
     module__network__data__packet_get_ip_header(p);
   module__network__data__ip__udp_header *udp =
     module__network__data__packet_get_ip_udp_header(ip);
+  udp->checksum = 0; // RFC 791 says that "For purposes of
+  // computing the checksum, the value of the checksum field is zero."
+
 
   uint16_t length = module__network__data__ntohs(ip->total_length);
   uint16_t n_bytes = length - sizeof(module__network__data__ip_header);
@@ -652,7 +657,8 @@ void module__network__data__packet_print_ip_udp_bootp_header(
   module_terminal_global_print_c_string("\", \"gateway_ip_address\": \"");
   module__network__data__print_ipv4(h->gateway_ip_address);
   module_terminal_global_print_c_string("\", \"client_hardware_address\": \"");
-  module__network__data__print_mac(&(h->client_hardware_address));
+  module__network__data__print_mac(
+    (const module__network__data__mac_address*)(h->client_hardware_address));
   module_terminal_global_print_c_string("\", \"server_host_name\": \"");
   module_terminal_global_print_c_string((const char*)(h->server_host_name));
   module_terminal_global_print_c_string("\", \"boot_file_name\": \"");

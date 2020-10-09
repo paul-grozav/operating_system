@@ -476,7 +476,11 @@ void module__network__data__packet_tcp_checksum(
 //! https://tools.ietf.org/html/rfc951
 typedef struct __attribute__((__packed__))
 {
-  //! packet opcode type / message type
+  /**
+   * packet opcode type / message type
+   * 1 = Boot request
+   * 2 = Boot reply
+   */
   uint8_t op_code;
 
   //! Hardware address type
@@ -518,14 +522,8 @@ typedef struct __attribute__((__packed__))
   //! boot file name
   uint8_t boot_file_name[128];
 
-#ifdef SUPPORT_DHCP
-#define BOOTP_VENDSIZE 312
-#else
-#define BOOTP_VENDSIZE 64
-#endif
-
   //! Vendor-specific area
-  uint8_t	vendor_area[BOOTP_VENDSIZE];
+  uint8_t	vendor_area[64]; // if support_dhcp the 312 else 64
 } module__network__data__ip__udp__bootp_header;
 // -------------------------------------------------------------------------- //
 module__network__data__ip__udp__bootp_header *

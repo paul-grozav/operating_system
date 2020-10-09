@@ -71,16 +71,32 @@ uint32_t module_kernel_in_32(const uint16_t port);
  * @note All values in that interval will be lost!
  */
 void module_kernel_memset(void *start, const char value, const size_t length);
-
+// -------------------------------------------------------------------------- //
 /**
  * Copy memory from source to destination
  * @param[in, out] source - Pointer to source data buffer. Data will be read
  * from here.
  * @param[in, out] destination - Pointer to destination data. Data will be
  * written here.
- * @param[in] size - Number of bytes to vopy from source to destination buffer.
+ * @param[in] size - Number of bytes to copy from source to destination buffer.
  */
 void module_kernel_memcpy(const void * const source, void* destination,
+  const size_t size);
+// -------------------------------------------------------------------------- //
+/**
+ * Copy memory from source to destination
+ * @param[in, out] a - Pointer to first data buffer. Data will be read from
+ * here.
+ * @param[in, out] b - Pointer to second data buffer. Data will be read from
+ * here.
+ * @param[in] size - Number of bytes to compare the two data buffers.
+ * @return If all the first size bytes are equal in the a buffer and b buffer,
+ * it will return 0. At the first byte that differs, if the byte from a has a
+ * numeric value less than the byte from b, then it will return -1. If the byte
+ * from a has a numeric value greater than the byte from b, then it will return
+ * 1.
+ */
+int8_t module_kernel_memcmp(const void * const a, const void * const b,
   const size_t size);
 // -------------------------------------------------------------------------- //
 #endif // header guard
