@@ -36,6 +36,18 @@ typedef struct module__network__struct_ethernet_interface
    */
   size_t ipq_index;
 
+  //! IP address of this interface
+  uint32_t ip;
+
+  //! Subnet mask of this interface
+  uint32_t subnet_mask;
+
+  //! GateWay IP address of this interface(used as router)
+  uint32_t gw;
+
+  //! DNS (server) IP address of this interface
+  uint32_t dns;
+
   /**
    * Pointer to the next ethernet interface, making this a linked list.
    */

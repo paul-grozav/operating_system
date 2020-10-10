@@ -740,7 +740,7 @@ bool module__network__service__dhcp__client__get_net_config(
   module__network__ethernet_interface * const interface,
   module__network__data__dhcp_config * const cfg)
 {
-
+  // should be the same transaction id across all 4 packets.
   bool is_ok = false;
   module__network__service__dhcp__client__step1__send_dhcp_discover_packet(
     interface);
