@@ -428,21 +428,22 @@ typedef struct __attribute__((__packed__))
   // byte = 0x01 = 0000 0001 = (ns=1, reserved=0, offset=0)
   // byte = 0xf0 = 1111 0000 = (ns=0, reserved=0, offset=15)
   // byte = 0x0e = 0000 1110 = (ns=0, reserved=7, offset=0)
+  // byte = 0x50 = 0101 0000 = (ns=0, reserved=0, offset=5)
   uint16_t f_ns : 1;
   uint16_t _reserved : 3;
-  uint16_t offset : 4;
+  uint16_t offset : 4; // aka - header length ?
 
   //! finish
-  uint16_t f_fin : 1;
-  uint16_t f_syn : 1;
-  uint16_t f_rst : 1;
+  uint16_t f_fin : 1; // Least significant bit, index 0, 2^0 bit
+  uint16_t f_syn : 1; // index 1, 2^1 bit
+  uint16_t f_rst : 1; // index 2, 2^2 bit
 
   //! push
-  uint16_t f_psh : 1;
-  uint16_t f_ack : 1;
-  uint16_t f_urg : 1;
-  uint16_t f_ece : 1;
-  uint16_t f_cwr : 1;
+  uint16_t f_psh : 1; // index 3, 2^3 bit
+  uint16_t f_ack : 1; // index 4, 2^4 bit
+  uint16_t f_urg : 1; // index 5, 2^5 bit
+  uint16_t f_ece : 1; // index 6, 2^6 bit
+  uint16_t f_cwr : 1; // index 7, 2^7 bit
   uint16_t window;
   uint16_t checksum;
   uint16_t urg_ptr;

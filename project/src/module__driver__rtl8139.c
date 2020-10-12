@@ -271,6 +271,13 @@ void module__driver__rtl8139__interrupt_handler(
         module_terminal_global_print_c_string("Could not add incoming packet"
           " to interface queue.\n");
       }
+//      else
+//      {
+//        module_terminal_global_print_c_string("Added incoming packet to queue"
+//          " of driver instance=");
+//        module_terminal_global_print_hex_uint64((uint32_t)(driver));
+//        module_terminal_global_print_c_string(".\n");
+//      }
       // end
       free(pk);
       driver->rx_index += round_up(length + 4, 4);

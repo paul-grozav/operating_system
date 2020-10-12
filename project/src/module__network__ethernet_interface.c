@@ -124,9 +124,9 @@ bool module__network__ethernet_interface__add_packet_to_incoming_queue(
 //  module_terminal_global_print_uint64(i->ipq_index);
 //  module_terminal_global_print_c_string(" at addr=");
 //  module_terminal_global_print_hex_uint64(
-//    (uint64_t)(&(i->incoming_packets_queue[i->ipq_index])));
+//    (uint32_t)(&(i->incoming_packets_queue[i->ipq_index])));
 //  module_terminal_global_print_c_string(" on iface=");
-//  module_terminal_global_print_hex_uint64((uint64_t)(i));
+//  module_terminal_global_print_hex_uint64((uint32_t)(i));
 //  module_terminal_global_print_c_string("\n");
   i->incoming_packets_queue[i->ipq_index] = p;
   i->ipq_index += 1;
