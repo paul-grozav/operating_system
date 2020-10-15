@@ -78,7 +78,7 @@ module__network__data__packet * module__network__data__packet__alloc()
   const size_t packet_size = sizeof(module__network__data__packet) + ETH_MTU;
   module__network__data__packet * new_pk = malloc(packet_size);
   module_kernel_memset(new_pk, 1, packet_size);
-  new_pk->length = -1;
+  new_pk->length = 0;
 //  new_pk->length = packet_size;
 //  new_pk->from = NULL;
 //  new_pk->refcount = 1;
@@ -86,12 +86,12 @@ module__network__data__packet * module__network__data__packet__alloc()
 }
 // -------------------------------------------------------------------------- //
 module__network__data__packet * module__network__data__packet__create_with_data(
-  const char * const data, const size_t length)
+  const char * const data, const uint32_t length)
 {
   const size_t packet_size = sizeof(module__network__data__packet) + length;
   module__network__data__packet * new_pk = malloc(packet_size);
   module_kernel_memcpy(data, new_pk->buffer, length);
-  new_pk->length = (int32_t)(length);
+  new_pk->length = length;
   return new_pk;
 }
 // -------------------------------------------------------------------------- //

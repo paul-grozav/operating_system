@@ -45,8 +45,9 @@ typedef struct
 
   /**
    * Number of bytes of buffer data, following this struct in memory.
+   * @note 0 is an invalid value, unknown, uninitialized.
    */
-  int32_t length; // -1 if unknown
+  uint32_t length;
 
   /**
    * Sequence of bytes following this structure, in the allocated heap zone.
@@ -59,7 +60,7 @@ typedef struct
 module__network__data__packet * module__network__data__packet__alloc();
 // -------------------------------------------------------------------------- //
 module__network__data__packet * module__network__data__packet__create_with_data(
-  const char * const data, const size_t length);
+  const char * const data, const uint32_t length);
 // -------------------------------------------------------------------------- //
 
 
@@ -422,7 +423,25 @@ typedef struct __attribute__((__packed__))
 {
   uint16_t source_port;
   uint16_t destination_port;
+
+  /**
+   * @brief seq - sequence number
+   * Has a dual role:
+   *  1. If the SYN flag is set (1), then this is the initial sequence number.
+   *    The sequence number of the actual first data byte and the acknowledged
+   *    number in the corresponding ACK are then this sequence number plus 1.
+   *  2. If the SYN flag is clear (0), then this is the accumulated sequence
+   *    number of the first data byte of this segment for the current session.
+   */
   uint32_t seq;
+
+  /**
+   * @brief ack acknowledgement number
+   * If the ACK flag is set then the value of this field is the next sequence
+   * number that the sender of the ACK is expecting. This acknowledges receipt
+   * of all prior bytes (if any). The first ACK sent by each end acknowledges
+   * the other end's initial sequence number itself, but no data.
+   */
   uint32_t ack;
 
   // byte = 0x01 = 0000 0001 = (ns=1, reserved=0, offset=0)
@@ -465,6 +484,11 @@ void module__network__data__packet_print_ip_tcp_header(
 // -------------------------------------------------------------------------- //
 void module__network__data__packet_tcp_checksum(
   module__network__data__packet *p);
+// -------------------------------------------------------------------------- //
+typedef struct
+{
+  uint32_t seq;
+} module__network__data__ip__tcp_session;
 // -------------------------------------------------------------------------- //
 
 

@@ -54,10 +54,11 @@ void module__driver__rtl8139__send_packet(
   const module__network__data__packet * const p,
   module__driver__rtl8139__instance * driver)
 {
-  if(!(p->length > 0 && p->length < ETH_MTU))
+  if(p->length == 0 || p->length >= ETH_MTU)
   {
     // problem
-    module_terminal_global_print_c_string("Problem sending packet with length=");
+    module_terminal_global_print_c_string("Problem sending packet with"
+      " length=");
     module_terminal_global_print_uint64(p->length);
     module_terminal_global_print_c_string("\n");
   }

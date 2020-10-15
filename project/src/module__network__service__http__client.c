@@ -39,8 +39,8 @@ bool module__network__service__http__client__step1_tcp_connection_init(
     sizeof(module__network__data__ip_header)
     + sizeof(module__network__data__ip__tcp_header)
     + len);
-  iph->id = module__network__data__htons(0x5c83);
-  iph->flags_frag = module__network__data__htons(0x4000);
+  iph->id = module__network__data__htons(0);
+  iph->flags_frag = module__network__data__htons(1 << 14); // Don't Fragment bit
   iph->ttl = 64;
   iph->protocol = module__network__data__ethernet__ip__protocol_type__tcp;
   iph->header_checksum = 0; // populated later at the end, after data
@@ -52,7 +52,7 @@ bool module__network__service__http__client__step1_tcp_connection_init(
 
   tcph->source_port = module__network__data__htons(source_port); // random
   tcph->destination_port = module__network__data__htons(server_port);
-  tcph->seq = module__network__data__htonl(0xdb7fa4f6); // ???
+  tcph->seq = module__network__data__htonl(0);
   if (flags & module__network__data__ip__tcp_flag__ack)
   {
     tcph->ack = module__network__data__htonl(0);//1); //s->recv_seq);
@@ -219,6 +219,7 @@ bool module__network__service__http__client__step2__receive_tcp_synack_packet(
 //    module__network__data__packet_get_ip_udp_bootp_header_const(
 //    module__network__data__packet_get_ip_udp_header_const(
 //    module__network__data__packet_get_ip_header_const(p))));
+  free(p);
   return true;
 }
 // -------------------------------------------------------------------------- //
@@ -253,8 +254,8 @@ bool module__network__service__http__client__step3_tcp_ack_packet(
     sizeof(module__network__data__ip_header)
     + sizeof(module__network__data__ip__tcp_header)
     + len);
-  iph->id = module__network__data__htons(0x5c83 + 1);
-  iph->flags_frag = module__network__data__htons(0x4000);
+  iph->id = module__network__data__htons(0);
+  iph->flags_frag = module__network__data__htons(1 << 14); // Don't Fragment bit
   iph->ttl = 64;
   iph->protocol = module__network__data__ethernet__ip__protocol_type__tcp;
   iph->header_checksum = 0; // populated later at the end, after data
@@ -266,10 +267,10 @@ bool module__network__service__http__client__step3_tcp_ack_packet(
 
   tcph->source_port = module__network__data__htons(source_port); // random
   tcph->destination_port = module__network__data__htons(server_port);
-  tcph->seq = module__network__data__htonl(0xdb7fa4f6 + 1); // ???
+  tcph->seq = module__network__data__htonl(0 + 1); // next seq
   if (flags & module__network__data__ip__tcp_flag__ack)
   {
-    tcph->ack = module__network__data__htonl(0x0000fa02);
+    tcph->ack = module__network__data__htonl(0x0000fa01 + 1);//prev sent seq+1??
   }
   else
   {
@@ -303,9 +304,9 @@ bool module__network__service__http__client__step4_http_request(
   module__network__ethernet_interface * const interface,
   const uint32_t server_ip, const module__network__data__mac_address server_mac,
   const uint16_t server_port, const uint16_t source_port,
-  const char * const request, const size_t request_size)
+  const char * const request, const uint16_t request_size)
 {
-  const size_t len = request_size;
+  const uint16_t len = request_size;
   const uint8_t flags = module__network__data__ip__tcp_flag__psh
     | module__network__data__ip__tcp_flag__ack;
   module_terminal_global_print_c_string("Sending HTTP request.\n");
@@ -332,8 +333,8 @@ bool module__network__service__http__client__step4_http_request(
     sizeof(module__network__data__ip_header)
     + sizeof(module__network__data__ip__tcp_header)
     + len);
-  iph->id = module__network__data__htons(0x5c83 + 2);
-  iph->flags_frag = module__network__data__htons(0x4000);
+  iph->id = module__network__data__htons(0);
+  iph->flags_frag = module__network__data__htons(1 << 14); // Don't Fragment bit
   iph->ttl = 64;
   iph->protocol = module__network__data__ethernet__ip__protocol_type__tcp;
   iph->header_checksum = 0; // populated later at the end, after data
@@ -345,10 +346,10 @@ bool module__network__service__http__client__step4_http_request(
 
   tcph->source_port = module__network__data__htons(source_port); // random
   tcph->destination_port = module__network__data__htons(server_port);
-  tcph->seq = module__network__data__htonl(0xdb7fa4f6 + 1); // +1 not +2 !!
+  tcph->seq = module__network__data__htonl(0 + 1); // +1 not +2 !!
   if (flags & module__network__data__ip__tcp_flag__ack)
   {
-    tcph->ack = module__network__data__htonl(0x0000fa02);
+    tcph->ack = module__network__data__htonl(0); // is this needed x0000fa02); ?
   }
   else
   {
@@ -380,11 +381,287 @@ bool module__network__service__http__client__step4_http_request(
   return true;
 }
 // -------------------------------------------------------------------------- //
+bool module__network__service__http__client__step5_recv_http_response_packets(
+  module__network__ethernet_interface * const interface,
+  const uint32_t server_ip, const module__network__data__mac_address server_mac,
+  const uint16_t server_port, const uint16_t source_port)
+{
+  (void)server_ip;
+  (void)server_mac;
+  (void)server_port;
+  (void)source_port;
+  module_terminal_global_print_hex_uint64((uint32_t)(interface->driver));
+  module_terminal_global_print_c_string(" ...\n");
+  module_terminal_global_print_c_string("GOT-0\n");
+  while(interface->ipq_index == 0)
+  {
+    module_terminal_global_print_c_string("waiting for packet. idx=");
+    module_terminal_global_print_hex_uint64((uint32_t)(interface->ipq_index));
+    module_terminal_global_print_c_string("\n");
+  } // wait for a packet
+  module_terminal_global_print_c_string("GOT-1\n");
+  // got a packet ... maybe not the right one ...
+  const module__network__data__packet * const p =
+    module__network__ethernet_interface__get_packet_from_incoming_queue(
+    interface);
+  free(p);
+
+
+
+
+  module_terminal_global_print_c_string("Waiting for TCP SYN/ACK packet on"
+    " driver=");
+  module_terminal_global_print_hex_uint64((uint32_t)(interface->driver));
+  module_terminal_global_print_c_string(" ...\n");
+  module_terminal_global_print_c_string("GOT-0\n");
+  while(interface->ipq_index == 0)
+  {
+    module_terminal_global_print_c_string("waiting for packet. idx=");
+    module_terminal_global_print_hex_uint64((uint32_t)(interface->ipq_index));
+    module_terminal_global_print_c_string("\n");
+  } // wait for a packet
+  module_terminal_global_print_c_string("GOT-2\n");
+  // got a packet ... maybe not the right one ...
+  const module__network__data__packet * const p2 =
+    module__network__ethernet_interface__get_packet_from_incoming_queue(
+    interface);
+  free(p2);
+
+  return true;
+}
+// -------------------------------------------------------------------------- //
+bool module__network__service__http__client__step6_ack_partial_response(
+  module__network__ethernet_interface * const interface,
+  const uint32_t server_ip, const module__network__data__mac_address server_mac,
+  const uint16_t server_port, const uint16_t source_port)
+{
+  const size_t len = 0;
+  const uint8_t flags = module__network__data__ip__tcp_flag__ack;
+  module_terminal_global_print_c_string("Receive HTTP response packets.\n");
+  module__network__data__packet *p = module__network__data__packet__alloc();
+  p->length = sizeof(module__network__data__ethernet_header)
+    + sizeof(module__network__data__ip_header)
+    + sizeof(module__network__data__ip__tcp_header)
+    + len
+  ;
+
+  module__network__data__ethernet_header * eh =
+    module__network__data__packet_get_ethernet_header(p);
+  eh->destination_mac = server_mac;
+  eh->source_mac = interface->mac_address;
+  eh->ethertype = module__network__data__htons(
+    module__network__data__ethernet_header_type__ip_v4);
+
+  module__network__data__ip_header * iph =
+    module__network__data__packet_get_ip_header(p);
+  iph->version = 4;
+  iph->header_length = 5;
+  iph->dscp = 0;
+  iph->total_length = module__network__data__htons(
+    sizeof(module__network__data__ip_header)
+    + sizeof(module__network__data__ip__tcp_header)
+    + len);
+  iph->id = module__network__data__htons(0);
+  iph->flags_frag = module__network__data__htons(1 << 14); // Don't Fragment bit
+  iph->ttl = 64;
+  iph->protocol = module__network__data__ethernet__ip__protocol_type__tcp;
+  iph->header_checksum = 0; // populated later at the end, after data
+  iph->source_ip = interface->ip;
+  iph->destination_ip = server_ip;
+
+  module__network__data__ip__tcp_header * tcph =
+    module__network__data__packet_get_ip_tcp_header(iph);
+
+  tcph->source_port = module__network__data__htons(source_port); // random
+  tcph->destination_port = module__network__data__htons(server_port);
+  tcph->seq = module__network__data__htonl(0 + 1); // next seq
+  if (flags & module__network__data__ip__tcp_flag__ack)
+  {
+    tcph->ack = module__network__data__htonl(66882); // related to sum=2881 ??
+  }
+  else
+  {
+    tcph->ack = 0;
+  }
+  tcph->f_ns = 0; // 1 bit
+  tcph->_reserved = 0; // 3 bits
+  tcph->offset = 5;//6;//10/2;//5; // 5=no_opt & 10=opt // 4 bits
+  tcph->f_fin = ((flags & module__network__data__ip__tcp_flag__fin) > 0);
+  tcph->f_syn = ((flags & module__network__data__ip__tcp_flag__syn) > 0);
+  tcph->f_rst = ((flags & module__network__data__ip__tcp_flag__rst) > 0);
+  tcph->f_psh = ((flags & module__network__data__ip__tcp_flag__psh) > 0);
+  tcph->f_ack = ((flags & module__network__data__ip__tcp_flag__ack) > 0);
+  tcph->f_urg = ((flags & module__network__data__ip__tcp_flag__urg) > 0);
+  tcph->f_ece = 0;
+  tcph->f_cwr = 0;
+  tcph->window = module__network__data__htons(64240);
+  tcph->checksum = 0;
+  tcph->urg_ptr = 0;
+
+  module__network__data__packet_tcp_checksum(p);
+  module__network__data__ip__checksum(p);
+
+//  module_terminal_print_buffer_hex_bytes((char*)(p->buffer), p->length);
+  module__network__ethernet_interface__send_packet(p, interface);
+  free(p);
+  return true;
+}
+// -------------------------------------------------------------------------- //
+bool module__network__service__http__client__step7_recv_http_response_packets2(
+  module__network__ethernet_interface * const interface,
+  const uint32_t server_ip, const module__network__data__mac_address server_mac,
+  const uint16_t server_port, const uint16_t source_port)
+{
+  (void)server_ip;
+  (void)server_mac;
+  (void)server_port;
+  (void)source_port;
+  module_terminal_global_print_hex_uint64((uint32_t)(interface->driver));
+  module_terminal_global_print_c_string(" ...\n");
+  module_terminal_global_print_c_string("GOT-0\n");
+  while(interface->ipq_index == 0)
+  {
+    module_terminal_global_print_c_string("waiting for packet. idx=");
+    module_terminal_global_print_hex_uint64((uint32_t)(interface->ipq_index));
+    module_terminal_global_print_c_string("\n");
+  } // wait for a packet
+  module_terminal_global_print_c_string("GOT-1\n");
+  // got a packet ... maybe not the right one ...
+  const module__network__data__packet * const p =
+    module__network__ethernet_interface__get_packet_from_incoming_queue(
+    interface);
+  free(p);
+
+
+
+
+  module_terminal_global_print_c_string("Waiting for TCP SYN/ACK packet on"
+    " driver=");
+  module_terminal_global_print_hex_uint64((uint32_t)(interface->driver));
+  module_terminal_global_print_c_string(" ...\n");
+  module_terminal_global_print_c_string("GOT-0\n");
+  while(interface->ipq_index == 0)
+  {
+    module_terminal_global_print_c_string("waiting for packet. idx=");
+    module_terminal_global_print_hex_uint64((uint32_t)(interface->ipq_index));
+    module_terminal_global_print_c_string("\n");
+  } // wait for a packet
+  module_terminal_global_print_c_string("GOT-2\n");
+  // got a packet ... maybe not the right one ...
+  const module__network__data__packet * const p2 =
+    module__network__ethernet_interface__get_packet_from_incoming_queue(
+    interface);
+  free(p2);
+
+
+
+
+  module_terminal_global_print_c_string("Waiting for TCP SYN/ACK packet on"
+    " driver=");
+  module_terminal_global_print_hex_uint64((uint32_t)(interface->driver));
+  module_terminal_global_print_c_string(" ...\n");
+  module_terminal_global_print_c_string("GOT-0\n");
+  while(interface->ipq_index == 0)
+  {
+    module_terminal_global_print_c_string("waiting for packet. idx=");
+    module_terminal_global_print_hex_uint64((uint32_t)(interface->ipq_index));
+    module_terminal_global_print_c_string("\n");
+  } // wait for a packet
+  module_terminal_global_print_c_string("GOT-3\n");
+  // got a packet ... maybe not the right one ...
+  const module__network__data__packet * const p3 =
+    module__network__ethernet_interface__get_packet_from_incoming_queue(
+    interface);
+  free(p3);
+
+  return true;
+}
+// -------------------------------------------------------------------------- //
+bool module__network__service__http__client__step8_ack_partial_response2(
+  module__network__ethernet_interface * const interface,
+  const uint32_t server_ip, const module__network__data__mac_address server_mac,
+  const uint16_t server_port, const uint16_t source_port)
+{
+  const size_t len = 0;
+  const uint8_t flags = module__network__data__ip__tcp_flag__ack;
+  module_terminal_global_print_c_string("Receive HTTP response packets2.\n");
+  module__network__data__packet *p = module__network__data__packet__alloc();
+  p->length = sizeof(module__network__data__ethernet_header)
+    + sizeof(module__network__data__ip_header)
+    + sizeof(module__network__data__ip__tcp_header)
+    + len
+  ;
+
+  module__network__data__ethernet_header * eh =
+    module__network__data__packet_get_ethernet_header(p);
+  eh->destination_mac = server_mac;
+  eh->source_mac = interface->mac_address;
+  eh->ethertype = module__network__data__htons(
+    module__network__data__ethernet_header_type__ip_v4);
+
+  module__network__data__ip_header * iph =
+    module__network__data__packet_get_ip_header(p);
+  iph->version = 4;
+  iph->header_length = 5;
+  iph->dscp = 0;
+  iph->total_length = module__network__data__htons(
+    sizeof(module__network__data__ip_header)
+    + sizeof(module__network__data__ip__tcp_header)
+    + len);
+  iph->id = module__network__data__htons(0);
+  iph->flags_frag = module__network__data__htons(1 << 14); // Don't Fragment bit
+  iph->ttl = 64;
+  iph->protocol = module__network__data__ethernet__ip__protocol_type__tcp;
+  iph->header_checksum = 0; // populated later at the end, after data
+  iph->source_ip = interface->ip;
+  iph->destination_ip = server_ip;
+
+  module__network__data__ip__tcp_header * tcph =
+    module__network__data__packet_get_ip_tcp_header(iph);
+
+  tcph->source_port = module__network__data__htons(source_port); // random
+  tcph->destination_port = module__network__data__htons(server_port);
+  tcph->seq = module__network__data__htonl(0 + 1); // next seq
+  if (flags & module__network__data__ip__tcp_flag__ack)
+  {
+    tcph->ack = module__network__data__htonl(71202); // related to sum=7201 ??
+  }
+  else
+  {
+    tcph->ack = 0;
+  }
+  tcph->f_ns = 0; // 1 bit
+  tcph->_reserved = 0; // 3 bits
+  tcph->offset = 5;//6;//10/2;//5; // 5=no_opt & 10=opt // 4 bits
+  tcph->f_fin = ((flags & module__network__data__ip__tcp_flag__fin) > 0);
+  tcph->f_syn = ((flags & module__network__data__ip__tcp_flag__syn) > 0);
+  tcph->f_rst = ((flags & module__network__data__ip__tcp_flag__rst) > 0);
+  tcph->f_psh = ((flags & module__network__data__ip__tcp_flag__psh) > 0);
+  tcph->f_ack = ((flags & module__network__data__ip__tcp_flag__ack) > 0);
+  tcph->f_urg = ((flags & module__network__data__ip__tcp_flag__urg) > 0);
+  tcph->f_ece = 0;
+  tcph->f_cwr = 0;
+  tcph->window = module__network__data__htons(64240);
+  tcph->checksum = 0;
+  tcph->urg_ptr = 0;
+
+  module__network__data__packet_tcp_checksum(p);
+  module__network__data__ip__checksum(p);
+
+//  module_terminal_print_buffer_hex_bytes((char*)(p->buffer), p->length);
+  module__network__ethernet_interface__send_packet(p, interface);
+  free(p);
+  return true;
+}
+// -------------------------------------------------------------------------- //
 bool module__network__service__http__client__request_response(
   module__network__ethernet_interface * const interface,
   const uint32_t server_ip, const module__network__data__mac_address server_mac,
   const uint16_t server_port)
 {
+  // See: https://packetlife.net/blog/2010/jun/7/
+  // understanding-tcp-sequence-acknowledgment-numbers/
+
   const uint16_t source_port = 41860;
   bool sim = false;
   // TCP HTTP Request-Response
@@ -448,7 +725,6 @@ bool module__network__service__http__client__request_response(
   is_ok = module__network__service__http__client__step4_http_request(
     interface, server_ip, server_mac, server_port, source_port, request,
     request_size);
-  return is_ok;
   }
   else
   {
@@ -469,11 +745,25 @@ bool module__network__service__http__client__request_response(
 "\x6f\x6e\x3a\x20\x4b\x65\x65\x70\x2d\x41\x6c\x69\x76\x65\x0d\x0a"
 "\x0d\x0a"
   , 194);
-//  module_terminal_print_buffer_hex_bytes2((char*)(p->buffer), p->length);
+//  module_terminal_print_buffer_hex_bytes((char*)(p->buffer), p->length);
   module__network__ethernet_interface__send_packet(p, interface);
   free(p);
   }
 
-  return true;
+  is_ok =
+    module__network__service__http__client__step5_recv_http_response_packets(
+    interface, server_ip, server_mac, server_port, source_port);
+
+  is_ok = module__network__service__http__client__step6_ack_partial_response(
+    interface, server_ip, server_mac, server_port, source_port);
+
+  is_ok =
+    module__network__service__http__client__step7_recv_http_response_packets2(
+    interface, server_ip, server_mac, server_port, source_port);
+
+  is_ok = module__network__service__http__client__step8_ack_partial_response2(
+    interface, server_ip, server_mac, server_port, source_port);
+
+  return is_ok;
 }
 // -------------------------------------------------------------------------- //
