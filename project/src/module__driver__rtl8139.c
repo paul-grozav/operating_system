@@ -179,7 +179,7 @@ void module__driver__rtl8139__interrupt_handler(
 {
   if (flags & RX_OK)
   {
-    module_terminal_global_print_c_string("Packet received.\n");
+//    module_terminal_global_print_c_string("Packet received.\n");
   }
   if (flags & RX_ERR)
   {
@@ -191,7 +191,7 @@ void module__driver__rtl8139__interrupt_handler(
   }
   if (flags & TX_OK)
   {
-    module_terminal_global_print_c_string("Packet sent.\n");
+//    module_terminal_global_print_c_string("Packet sent.\n");
     module_kernel_in_32(driver->iobase + TX_STATUS + (driver->tx_slot-1) * 4);
   }
 
@@ -200,8 +200,9 @@ void module__driver__rtl8139__interrupt_handler(
 
   if (!(flags & 1))
   {
-    module_terminal_global_print_c_string("This card interrupted, but there is"
-      " no incoming packet. Ack and out.\n");
+    // this happens when we're triggered by sending a packet
+//    module_terminal_global_print_c_string("This card interrupted, but there"
+//      " is no incoming packet. Ack and out.\n");
     // Acknowledge the interrupt
 //    module_kernel_out_16(iobase + 0x3e, interrupt_flag);
     return;
@@ -209,8 +210,8 @@ void module__driver__rtl8139__interrupt_handler(
 
   while((module_kernel_in_8(driver->iobase + 0x37) & 1) == 0)
   { // while RX NOT empty
-    module_terminal_global_print_c_string("This card interrupted, and there is"
-      " a packet. Processing it ...\n");
+//    module_terminal_global_print_c_string("This card interrupted, and there is"
+//      " a packet. Processing it ...\n");
     {
 //      module_terminal_global_print_c_string("rx_index=");
 //      module_terminal_global_print_uint64(rx_index);
@@ -222,9 +223,9 @@ void module__driver__rtl8139__interrupt_handler(
 //      module_terminal_global_print_c_string("PP.flags=");
 //      module_terminal_global_print_uint64(flags);
 //      module_terminal_global_print_c_string("\n");
-      module_terminal_global_print_c_string("PP.length=");
-      module_terminal_global_print_uint64(length);
-      module_terminal_global_print_c_string("\n");
+//      module_terminal_global_print_c_string("PP.length=");
+//      module_terminal_global_print_uint64(length);
+//      module_terminal_global_print_c_string("\n");
 
       if ((flags & (RX_BAD_SYMBOL | RX_RUNT | RX_TOO_LONG |
         RX_CRC_ERR | RX_BAD_ALIGN)) ||

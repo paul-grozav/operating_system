@@ -44,11 +44,20 @@ typedef struct
 
   enum module__network__ip__tcp__session__connection_state connection_state;
 
-  //!
+  /**
+   * Number of packets, previously sent, that were carrying payload.
+   * @note The initial SYN packet, sent to initiate a TCP connection is going to
+   * increment this seq number. But the ACK sent after the connection attempt
+   * was accepted, will not increment this sequence number.
+   * @note a.k.a. "bytes_sent"
+   */
   uint32_t seq;
 
-  //!
+  /**
+   * Acknowledgement is set to (the_seq_of_the_last_received_packet + 1)
+   */
   uint32_t ack;
+
 } module__network__ip__tcp__session;
 // -------------------------------------------------------------------------- //
 
