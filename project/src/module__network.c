@@ -19,6 +19,7 @@
 #include "module_interrupt.h"
 #include "module__network__data.h"
 #include "module__network__ethernet_interface.h"
+#include "module__network__ip__tcp.h"
 #include "module__network__service__dhcp__client.h"
 #include "module__network__service__http__client.h"
 #include "module__driver__rtl8139.h" // recursive?
@@ -454,8 +455,10 @@ void module__network__test()
   i->dns = cfg.dns;
 
   // HTTP Client
-  module__network__service__http__client__request_response(i,
-    cfg.dhcp_server_ip, cfg.dhcp_server_mac, 1030);
+//  module__network__service__http__client__request_response(i,
+//    cfg.dhcp_server_ip, cfg.dhcp_server_mac, 1030);
+  module__network__ip__tcp__test(i, cfg.dhcp_server_mac, cfg.dhcp_server_ip,
+    1030);
 
   module_terminal_global_print_c_string("NET TEST END\n");
   return;

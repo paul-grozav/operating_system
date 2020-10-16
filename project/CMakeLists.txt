@@ -10,6 +10,7 @@ add_executable(bin
   src/module__network.c
   src/module__network__ethernet_interface.c
   src/module__network__data.c
+  src/module__network__ip__tcp.c
   src/module__network__service__dhcp__client.c
   src/module__network__service__http__client.c
   src/module__pci.c

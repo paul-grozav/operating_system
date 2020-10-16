@@ -485,11 +485,6 @@ void module__network__data__packet_print_ip_tcp_header(
 void module__network__data__packet_tcp_checksum(
   module__network__data__packet *p);
 // -------------------------------------------------------------------------- //
-typedef struct
-{
-  uint32_t seq;
-} module__network__data__ip__tcp_session;
-// -------------------------------------------------------------------------- //
 
 
 
@@ -604,4 +599,3 @@ typedef struct
 // -------------------------------------------------------------------------- //
 #endif // header guard
 // -------------------------------------------------------------------------- //
-

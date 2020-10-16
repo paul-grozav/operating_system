@@ -64,7 +64,7 @@ source_files="kernel" &&
 modules="kernel terminal serial base interrupt heap video video_mode video_font\
   keyboard _pci _driver__rtl8139 _network _network__data\
   _network__ethernet_interface _network__service__dhcp__client\
-  _network__service__http__client" &&
+  _network__service__http__client _network__ip__tcp" &&
 for m in ${modules}; do
   source_files="${source_files} module_${m}"
 done &&
