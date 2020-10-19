@@ -142,7 +142,7 @@ void process_arp_packet(const module__network__data__packet * const p,
 {
   const module__network__data__arp_header * const arp =
     module__network__data__packet_get_arp_header_const(p);
-  module_terminal_print_buffer_hex_bytes(p->buffer, p->length);
+  module_terminal_global_print_buffer_hex_bytes(p->buffer, p->length);
   module__network__data__arp__header_print(arp);
   if (module__network__data__ntohs(arp->operation_type) ==
      module__network__data__ethernet__arp_operation_type__request
@@ -153,7 +153,7 @@ void process_arp_packet(const module__network__data__packet * const p,
     module__network__data__packet *response_packet =
       module__network__data__packet__alloc();
     arp_reply(response_packet, p, interface);
-    module_terminal_print_buffer_hex_bytes(response_packet->buffer,
+    module_terminal_global_print_buffer_hex_bytes(response_packet->buffer,
       response_packet->length);
     module__network__ethernet_interface__send_packet(response_packet,
       interface);
@@ -317,7 +317,7 @@ void process_ip_packet(const module__network__data__packet * const p,
   const module__network__data__ip_header * const ip =
     module__network__data__packet_get_ip_header_const(p);
 
-  module_terminal_print_buffer_hex_bytes(p->buffer, p->length);
+  module_terminal_global_print_buffer_hex_bytes(p->buffer, p->length);
   module__network__data__packet_print_ip_header(ip);
   if (ip->destination_ip != module__network__data__htonl(interface->ip))
   {
@@ -455,10 +455,10 @@ void module__network__test()
   i->dns = cfg.dns;
 
   // HTTP Client
-//  module__network__service__http__client__request_response(i,
-//    cfg.dhcp_server_ip, cfg.dhcp_server_mac, 1030);
-  module__network__ip__tcp__test(i, cfg.dhcp_server_mac, cfg.dhcp_server_ip,
-    1030);
+  module__network__service__http__client__request_response(i,
+    cfg.dhcp_server_ip, cfg.dhcp_server_mac, 1030);
+//  module__network__ip__tcp__test(i, cfg.dhcp_server_mac, cfg.dhcp_server_ip,
+//    1030);
 
   module_terminal_global_print_c_string("NET TEST END\n");
   return;

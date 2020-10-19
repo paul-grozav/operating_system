@@ -122,7 +122,7 @@ void module_terminal_print_c_string(const char* str, module_terminal_vga *t)
   }
 }
 // -------------------------------------------------------------------------- //
-void module_terminal_print_buffer_hex_bytes(const uint8_t * const base,
+void module_terminal_global_print_buffer_hex_bytes(const uint8_t * const base,
   const size_t count)
 {
 //  module_terminal_global_print_c_string("printing b=");
@@ -151,6 +151,21 @@ void module_terminal_print_buffer_hex_bytes(const uint8_t * const base,
     }
   }
   module_terminal_global_print_c_string("\n");
+}
+// -------------------------------------------------------------------------- //
+void module_terminal_global_print_buffer_bytes(const uint8_t * const base,
+  const size_t count)
+{
+//  module_terminal_global_print_c_string("printing b=");
+//  module_terminal_global_print_uint64((uint32_t)(base));
+//  module_terminal_global_print_c_string(" , len=");
+//  module_terminal_global_print_uint64(count);
+//  module_terminal_global_print_c_string("\n");
+
+  for (size_t i=0; i<count; i++)
+  {
+    module_terminal_global_print_char(*( const char*)(base + i));
+  }
 }
 // -------------------------------------------------------------------------- //
 void module_terminal_global_print_uint8(const uint8_t i)

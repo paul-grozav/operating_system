@@ -76,6 +76,20 @@ void module__network__ip__tcp__session_create(
   const uint16_t destination_port
   );
 // -------------------------------------------------------------------------- //
+void module__network__ip__tcp__connect(
+  module__network__ethernet_interface * const interface,
+  module__network__ip__tcp__session * const session);
+// -------------------------------------------------------------------------- //
+uint8_t module__network__ip__tcp__send(
+  module__network__ethernet_interface * const interface,
+  module__network__ip__tcp__session * const session,
+  const char * const buffer, const size_t buffer_size);
+// -------------------------------------------------------------------------- //
+uint8_t module__network__ip__tcp__recv(
+  module__network__ethernet_interface * const interface,
+  module__network__ip__tcp__session * const session,
+  char * const buffer, const size_t buffer_size, size_t * const bytes_read);
+// -------------------------------------------------------------------------- //
 //! Run a short TCP test
 void module__network__ip__tcp__test(
   module__network__ethernet_interface * const interface,

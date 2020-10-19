@@ -604,12 +604,11 @@ uint8_t module__network__ip__tcp__send(
   return r;
 }
 // -------------------------------------------------------------------------- //
-uint16_t module__network__ip__tcp__recv(
+uint8_t module__network__ip__tcp__recv(
   module__network__ethernet_interface * const interface,
   module__network__ip__tcp__session * const session,
-  char * const buffer, const size_t buffer_size)
+  char * const buffer, const size_t buffer_size, size_t * const bytes_read)
 {
-  uint16_t bytes_read = 0;
   // wait for ACK of sent payload data
 //  module_terminal_global_print_c_string("Waiting for TCP SYN/ACK packet on"
 //    " driver=");
@@ -729,7 +728,7 @@ uint16_t module__network__ip__tcp__recv(
 //    module__network__data__packet_get_ip_udp_header_const(
 //    module__network__data__packet_get_ip_header_const(p))));
   free(p);
-  bytes_read += tcph_payload_size;
+  *bytes_read += tcph_payload_size;
   // acknowledge bytes received from server
   session->ack += tcph_payload_size;
 
@@ -777,18 +776,19 @@ void module__network__ip__tcp__test(
   // step 3 = receive response
   const size_t buffer_size = 1024*1024;
   char buffer[1024*1024];
-  uint16_t bytes_read = 0;
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-  module__network__ip__tcp__recv(interface, &s, buffer, buffer_size);
-
+  size_t bytes_read = 0;
+  for (uint8_t i=0;i<1;i++)
+  {
+    size_t pbr = bytes_read;
+    module__network__ip__tcp__recv(interface, &s, buffer, buffer_size,
+      &bytes_read);
+    module_terminal_global_print_c_string("\n=============\n");
+    for (size_t i=pbr;i<pbr+300;i++)
+    {
+      module_terminal_global_print_char(buffer[i]);
+    }
+    module_terminal_global_print_c_string("\n=============\n");
+  }
   module_terminal_global_print_c_string("\n=============\n");
 }
 // -------------------------------------------------------------------------- //

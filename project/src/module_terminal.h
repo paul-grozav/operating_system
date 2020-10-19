@@ -76,7 +76,11 @@ void module_terminal_global_print_char(const char c);
 void module_terminal_print_char(const char c, module_terminal_vga *t);
 
 //! Prints a buffer of bytes in hex values.
-void module_terminal_print_buffer_hex_bytes(const uint8_t * const base,
+void module_terminal_global_print_buffer_hex_bytes(const uint8_t * const base,
+  const size_t count);
+
+//! Print a buffer of bytes.characters.
+void module_terminal_global_print_buffer_bytes(const uint8_t * const base,
   const size_t count);
 
 //! This function prints an entire string onto the global screen.
