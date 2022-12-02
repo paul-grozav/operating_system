@@ -91,6 +91,15 @@ void kernel_main()
   module_terminal_global_print_c_string("Enabling interrupts...\n");
   module_interrupt_enable();
 // -------------------------------------------------------------------------- //
+  module_terminal_global_print_c_string("__FUNCTION__=");
+  module_terminal_global_print_c_string(__FUNCTION__);
+  module_terminal_global_print_c_string("\n");
+  // same
+//  module_terminal_global_print_c_string("func=");
+//  module_terminal_global_print_c_string(__func__);
+//  module_terminal_global_print_c_string("\n");
+  // ? maybe use for processing external commands ?
+  // -------------------------------------------------------------------------- //
 //  module_video_test();
   module__pci__detect_devices();
   module__pci__test();

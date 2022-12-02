@@ -92,7 +92,7 @@ echo "Created .iso file!" &&
 # Serial redirect: -serial file:project/build/serial.txt
 # Current running cmd: qemu-system-i386 -curses -cdrom project/build/bootable.iso -boot d -serial file:project/build/serial.txt
 
-chown 1000:1000 -R ${work_path} &&
+chown root:root -R ${work_path} &&
 
 exit 0
 # ============================================================================ #

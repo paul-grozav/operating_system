@@ -2,14 +2,18 @@
 # ============================================================================ #
 # Author: Tancredi-Paul Grozav <paul@grozav.info>
 # ============================================================================ #
-# docker run -it --name=os debian:10.2
+# podman run -it --volume $(pwd):/mnt:rw --name=my_os_builder \
+#   docker.io/debian:11.5 # pwd=fs
 # OS setup
-#apt update &&
-#apt install -y curl gcc g++ make libgmp-dev libmpfr-dev libmpc-dev \
+# apt-get update &&
+# apt-get upgrade &&
+# apt-get install -y curl gcc g++ make libgmp-dev libmpfr-dev libmpc-dev \
 #  grub2 xorriso &&
 # Continue without installing GRUB? [yes/no] yes
+# exit # return to hypervisor
+# podman start os && podman exec -it my_os_builder /bin/bash
 
-
+set -x
 work_path="/mnt" &&
 cd ${work_path} &&
 # Preparation
@@ -113,7 +117,7 @@ echo "Created .iso file!" &&
 # Serial redirect: -serial file:project/build/serial.txt
 # Current running cmd: qemu-system-i386 -curses -cdrom project/build/bootable.iso -boot d -serial file:project/build/serial.txt
 
-chown 1000:1000 -R ${work_path} &&
+#chown root:root -R ${work_path} &&
 
 exit 0
 # ============================================================================ #

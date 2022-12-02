@@ -717,9 +717,14 @@ uint8_t module__network__ip__tcp__recv(
     module__network__data__ntohs(iph->total_length)
     - sizeof(module__network__data__ip_header)
     - sizeof(module__network__data__ip__tcp_header);
-  module_terminal_global_print_c_string("Received TCP payload=");
-  module_terminal_global_print_uint64(tcph_payload_size);
-  module_terminal_global_print_c_string("\n");
+//  module_terminal_global_print_c_string("Received TCP payload=");
+//  module_terminal_global_print_uint64(tcph_payload_size);
+//  module_terminal_global_print_c_string("\n");
+  if(buffer_size < tcph_payload_size)
+  {
+    // can not save all data to buffer
+    return 11;
+  }
 
   module_kernel_memcpy(tcph->data, buffer, tcph_payload_size);
 //  module_terminal_print_buffer_hex_bytes(p->buffer, (size_t)(p->length));

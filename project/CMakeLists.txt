@@ -1,5 +1,5 @@
-project(test)
-add_executable(bin
+project(operating_system_c)
+add_executable(unit_tests
   src/kernel.c
   src/module_base.c
   src/module__driver__rtl8139.c
